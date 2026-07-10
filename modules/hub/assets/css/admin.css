@@ -104,6 +104,11 @@ tr.dragging {
 	opacity: 0.4;
 }
 
+tr:has(dialog[open]),
+tr:has([popover]:popover-open) {
+	outline: 2px dashed var(--border);
+}
+
 tbody.dragging-folder {
 	opacity: 0.5;
 }
@@ -252,8 +257,18 @@ td strong {
 	border-radius: 3px;
 	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 	position-anchor: --edits;
-	right: anchor(left);
-	bottom: anchor(bottom);
+	left: auto;
+	right: anchor(left --edits);
+	bottom: auto;
+	top: anchor(center --edits);
+
+	position-try-fallbacks: --top;
+}
+
+@position-try --top {
+	top: auto;
+	right: anchor(left --edits);
+	bottom: anchor(center --edits);
 }
 
 .wpch-comment-head {
@@ -269,8 +284,8 @@ td strong {
 	display: flex;
 	flex-direction: column;
 	gap: 10px;
-	max-height: 45vh;
-	padding: 12px;
+	max-height: 25vh;
+	padding: 8px;
 	overflow: auto;
 	overscroll-behavior: contain;
 	text-align: left;
@@ -346,6 +361,7 @@ td strong {
 	font-size: 0.85em;
 	overflow-wrap: anywhere;
 	white-space: pre-wrap;
+	user-select: text;
 }
 
 /* Indented under the parent message; holds the replies and that comment's
