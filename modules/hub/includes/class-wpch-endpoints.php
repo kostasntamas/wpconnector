@@ -11,13 +11,13 @@ class WPCH_Endpoints
 {
 	const OPTION_NAME = 'wpch_endpoints_list';
 
-	public function get_all()
+	public function get_all(): array
 	{
 		$endpoints = get_option(self::OPTION_NAME, []);
 		return is_array($endpoints) ? $this->ensure_ids_and_orders($endpoints) : [];
 	}
 
-	public static function generate_id()
+	public static function generate_id(): string
 	{
 		return uniqid('e', true);
 	}
@@ -25,7 +25,7 @@ class WPCH_Endpoints
 	// The fixed set of per-row difficulty tags (stored as the slug in the
 	// endpoint's 'tag' field, '' = untagged). Rendered as a colored pill next
 	// to the domain in the main table and the health tabs.
-	public static function tag_presets()
+	public static function tag_presets(): array
 	{
 		return [
 			'easy'      => ['label' => 'Easy', 'color' => '#1a7f37'],
@@ -37,14 +37,14 @@ class WPCH_Endpoints
 	}
 
 	// Whitelists a tag value against tag_presets(); anything unknown becomes ''.
-	public static function sanitize_tag($tag)
+	public static function sanitize_tag(string $tag): string
 	{
 		$tag     = sanitize_text_field($tag);
 		$presets = self::tag_presets();
 		return isset($presets[$tag]) ? $tag : '';
 	}
 
-	public function next_order(array $endpoints)
+	public function next_order(array $endpoints): int
 	{
 		$max = 0;
 		foreach ($endpoints as $endpoint) {
@@ -58,7 +58,7 @@ class WPCH_Endpoints
 	// Backfills 'id' (stable, never changes after creation) and 'order' (display
 	// position, rewritten from the table's DOM order via reorder()) on rows saved
 	// by older versions; persists once if anything was missing.
-	private function ensure_ids_and_orders(array $endpoints)
+	private function ensure_ids_and_orders(array $endpoints): array
 	{
 		$changed = false;
 		$max     = 0;
@@ -89,12 +89,12 @@ class WPCH_Endpoints
 		return $endpoints;
 	}
 
-	public function save(array $endpoints)
+	public function save(array $endpoints): void
 	{
 		update_option(self::OPTION_NAME, $endpoints);
 	}
 
-	public function delete($index)
+	public function delete(int $index): bool
 	{
 		$endpoints = $this->get_all();
 		if (! isset($endpoints[$index])) {
@@ -107,7 +107,7 @@ class WPCH_Endpoints
 		return true;
 	}
 
-	public function add(array $endpoint)
+	public function add(array $endpoint): int
 	{
 		$endpoints = $this->get_all();
 		if (empty($endpoint['id'])) {
@@ -127,7 +127,7 @@ class WPCH_Endpoints
 	// table's current DOM order. Rewrites each row's 'order' (1..N) and folder
 	// assignment in place — array keys are left untouched so the row indexes
 	// already rendered on the page stay valid for delete/edit.
-	public function reorder(array $ordered_rows)
+	public function reorder(array $ordered_rows): void
 	{
 		$endpoints   = $this->get_all();
 		$index_by_id = [];
@@ -156,7 +156,7 @@ class WPCH_Endpoints
 	}
 
 	// One-time migration from the old single-textarea storage.
-	public function migrate_legacy()
+	public function migrate_legacy(): void
 	{
 		$legacy = get_option('wpch_endpoints', '');
 		if ('' === $legacy || false !== get_option(self::OPTION_NAME, false)) {
@@ -183,7 +183,7 @@ class WPCH_Endpoints
 		$this->save($endpoints);
 	}
 
-	public static function normalize_url($url)
+	public static function normalize_url(string $url): string
 	{
 		$url = trim($url);
 		if (! preg_match('#^https?://#i', $url)) {
@@ -196,19 +196,19 @@ class WPCH_Endpoints
 		return $base;
 	}
 
-	public static function login_url($endpoint_url)
+	public static function login_url(string $endpoint_url): string
 	{
 		return self::strip_status_path($endpoint_url) . '/panda-login/';
 	}
 
 	// The base site URL without the /wp-json/wpconnector/v1/status suffix,
 	// for showing/editing in the UI; normalize_url() re-adds it on save.
-	public static function display_url($endpoint_url)
+	public static function display_url(string $endpoint_url): string
 	{
 		return self::strip_status_path($endpoint_url);
 	}
 
-	private static function strip_status_path($endpoint_url)
+	private static function strip_status_path(string $endpoint_url): string
 	{
 		$base = strtok($endpoint_url, '?');
 		$base = preg_replace('#/wp-json/wpconnector/v1/status/?$#', '', $base);

@@ -12,23 +12,24 @@ class WPCH_Folders
 	const OPTION_NAME     = 'wpch_folders';
 	const OPEN_STATE_META = 'wpch_folder_open';
 
-	public function get_all()
+	public function get_all(): array
 	{
 		$folders = get_option(self::OPTION_NAME, []);
 		return is_array($folders) ? array_values($folders) : [];
 	}
 
-	public function color_presets()
+	public function color_presets(): array
 	{
 		return ['#cee9ff', '#ffd1a5', '#ffc8f2', '#F4E4BA', '#93E5AB', '#b8edff', '#d1cfff'];
 	}
 
-	public function save(array $folders)
+	public function save(array $folders): void
 	{
 		update_option(self::OPTION_NAME, $folders);
 	}
 
-	public function create($name, $color)
+	// $color may be null because sanitize_hex_color() returns null for invalid input.
+	public function create(string $name, ?string $color): string
 	{
 		$presets = $this->color_presets();
 		$folders = $this->get_all();
@@ -44,7 +45,7 @@ class WPCH_Folders
 		return $id;
 	}
 
-	public function update_color($folder_id, $color)
+	public function update_color(string $folder_id, ?string $color): void
 	{
 		if (! $color) {
 			return;
@@ -62,7 +63,7 @@ class WPCH_Folders
 		update_option(self::OPTION_NAME, $folders);
 	}
 
-	public function update_details($folder_id, $name, $color)
+	public function update_details(string $folder_id, string $name, ?string $color): void
 	{
 		$folders = $this->get_all();
 		foreach ($folders as &$folder) {
@@ -81,7 +82,7 @@ class WPCH_Folders
 		update_option(self::OPTION_NAME, $folders);
 	}
 
-	public function reorder(array $ordered_ids)
+	public function reorder(array $ordered_ids): void
 	{
 		$folders = $this->get_all();
 		$by_id   = [];
@@ -107,13 +108,13 @@ class WPCH_Folders
 	// page: [folder id or 'ungrouped' => 0|1], stored in user meta so it
 	// follows the WP account across browsers/devices. Ids absent from the
 	// array render expanded (the default for new folders).
-	public function get_open_states()
+	public function get_open_states(): array
 	{
 		$states = get_user_meta(get_current_user_id(), self::OPEN_STATE_META, true);
 		return is_array($states) ? $states : [];
 	}
 
-	public function set_open_state($folder_id, $open)
+	public function set_open_state(string $folder_id, bool $open): void
 	{
 		$states             = $this->get_open_states();
 		$states[$folder_id] = $open ? 1 : 0;
@@ -129,7 +130,7 @@ class WPCH_Folders
 		update_user_meta(get_current_user_id(), self::OPEN_STATE_META, $states);
 	}
 
-	public function resolve_choice($post)
+	public function resolve_choice(array $post): string
 	{
 		if (empty($post['folder_choice'])) {
 			return '';

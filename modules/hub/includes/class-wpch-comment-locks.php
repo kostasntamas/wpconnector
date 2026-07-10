@@ -25,7 +25,7 @@ class WPCH_Comment_Locks
 	/** Seconds before an unrefreshed lock is considered abandoned. */
 	const TTL = 90;
 
-	public function register()
+	public function register(): void
 	{
 		add_filter('heartbeat_received', [$this, 'heartbeat'], 10, 2);
 	}
@@ -35,7 +35,7 @@ class WPCH_Comment_Locks
 	// every comment currently open by *other* users as id => "name[, name]"
 	// so the page can badge those rows. Sending '' also releases any lock
 	// this user left behind (e.g. the close request never made it out).
-	public function heartbeat($response, $data)
+	public function heartbeat(array $response, array $data): array
 	{
 		if (! isset($data['wpch_comment_editing']) || ! current_user_can('manage_options')) {
 			return $response;
@@ -53,7 +53,7 @@ class WPCH_Comment_Locks
 		return $response;
 	}
 
-	public function acquire($endpoint_id)
+	public function acquire(string $endpoint_id): void
 	{
 		$user  = wp_get_current_user();
 		$locks = $this->get_active();
@@ -77,14 +77,14 @@ class WPCH_Comment_Locks
 		update_option(self::OPTION, $locks, false);
 	}
 
-	public function release($endpoint_id)
+	public function release(string $endpoint_id): void
 	{
 		$locks = $this->get_active();
 		unset($locks[$endpoint_id . ':' . get_current_user_id()]);
 		update_option(self::OPTION, $locks, false);
 	}
 
-	public function release_all_mine()
+	public function release_all_mine(): void
 	{
 		$user_id = get_current_user_id();
 		$locks   = $this->get_active();
@@ -99,7 +99,7 @@ class WPCH_Comment_Locks
 	}
 
 	// endpoint_id => comma-joined display names of *other* users editing it.
-	public function held_by_others()
+	public function held_by_others(): array
 	{
 		$user_id = get_current_user_id();
 		$out     = [];
@@ -117,13 +117,13 @@ class WPCH_Comment_Locks
 	// Who (other than the current user) has this comment open right now, or
 	// null — the instant answer shown when a dialog opens, before the first
 	// heartbeat tick.
-	public function holder_name($endpoint_id)
+	public function holder_name(string $endpoint_id): ?string
 	{
 		$others = $this->held_by_others();
 		return isset($others[$endpoint_id]) ? $others[$endpoint_id] : null;
 	}
 
-	private function get_active()
+	private function get_active(): array
 	{
 		$locks = get_option(self::OPTION, []);
 		if (! is_array($locks)) {

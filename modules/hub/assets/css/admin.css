@@ -154,6 +154,10 @@ thead th:not(:last-child) {
 	border-right: 1px solid;
 	border-color: white;
 }
+thead th:last-child {
+	border-right: 1px solid;
+	border-color: var(--tab-color, #00325c);
+}
 thead,
 thead th {
 	position: sticky;

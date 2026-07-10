@@ -9,20 +9,15 @@ if (! defined('ABSPATH')) {
  */
 class WPCH_Ajax
 {
-	/** @var WPCH_Endpoints */
-	private $endpoints;
+	private WPCH_Endpoints $endpoints;
 
-	/** @var WPCH_Folders */
-	private $folders;
+	private WPCH_Folders $folders;
 
-	/** @var WPCH_Status_Checker */
-	private $status_checker;
+	private WPCH_Status_Checker $status_checker;
 
-	/** @var WPCH_Admin_Page */
-	private $admin_page;
+	private WPCH_Admin_Page $admin_page;
 
-	/** @var WPCH_Comment_Locks */
-	private $comment_locks;
+	private WPCH_Comment_Locks $comment_locks;
 
 	public function __construct(WPCH_Endpoints $endpoints, WPCH_Folders $folders, WPCH_Status_Checker $status_checker, WPCH_Admin_Page $admin_page, WPCH_Comment_Locks $comment_locks)
 	{
@@ -33,7 +28,7 @@ class WPCH_Ajax
 		$this->comment_locks  = $comment_locks;
 	}
 
-	public function register()
+	public function register(): void
 	{
 		add_action('wp_ajax_wpch_add_endpoint', [$this, 'add_endpoint']);
 		add_action('wp_ajax_wpch_delete_endpoint', [$this, 'delete_endpoint']);
@@ -49,7 +44,7 @@ class WPCH_Ajax
 	// Called from folders.js when a folder group is collapsed/expanded:
 	// persists the per-user open state in user meta (WPCH_Folders::set_open_state()),
 	// so the settings page renders each group the way this user left it.
-	public function folder_state()
+	public function folder_state(): void
 	{
 		if (! current_user_can('manage_options')) {
 			wp_send_json_error(['message' => 'Forbidden'], 403);
@@ -71,7 +66,7 @@ class WPCH_Ajax
 	// {id, folder_id} in the table's DOM order, folder_order = csv of folder
 	// ids in block order. Rewrites each endpoint's 'order'/'folder_id' and the
 	// wpch_folders option order.
-	public function reorder()
+	public function reorder(): void
 	{
 		if (! current_user_can('manage_options')) {
 			wp_send_json_error(['message' => 'Forbidden'], 403);
@@ -106,7 +101,7 @@ class WPCH_Ajax
 		wp_send_json_success();
 	}
 
-	public function add_endpoint()
+	public function add_endpoint(): void
 	{
 		if (! current_user_can('manage_options')) {
 			wp_send_json_error(['message' => 'Forbidden'], 403);
@@ -114,7 +109,7 @@ class WPCH_Ajax
 
 		check_ajax_referer('wpch_manage');
 
-		if (empty($_POST['new_url'])) {
+		if (empty($_POST['new_url']) || ! is_string($_POST['new_url'])) {
 			wp_send_json_error(['message' => 'A URL is required.']);
 		}
 
@@ -177,7 +172,7 @@ class WPCH_Ajax
 		]);
 	}
 
-	public function update_endpoint()
+	public function update_endpoint(): void
 	{
 		if (! current_user_can('manage_options')) {
 			wp_send_json_error(['message' => 'Forbidden'], 403);
@@ -192,7 +187,7 @@ class WPCH_Ajax
 			wp_send_json_error(['message' => 'Site not found.']);
 		}
 
-		if (empty($_POST['edit_url'])) {
+		if (empty($_POST['edit_url']) || ! is_string($_POST['edit_url'])) {
 			wp_send_json_error(['message' => 'A URL is required.']);
 		}
 
@@ -203,7 +198,7 @@ class WPCH_Ajax
 		$endpoints[$index]['key']       = isset($_POST['edit_key']) ? sanitize_text_field(trim($_POST['edit_key'])) : '';
 		$endpoints[$index]['folder_id'] = $this->folders->resolve_choice($_POST);
 		// edit_tag is absent from older cached JS — leave the stored tag alone then.
-		if (isset($_POST['edit_tag'])) {
+		if (isset($_POST['edit_tag']) && is_string($_POST['edit_tag'])) {
 			$endpoints[$index]['tag'] = WPCH_Endpoints::sanitize_tag(wp_unslash($_POST['edit_tag']));
 		}
 
@@ -236,7 +231,7 @@ class WPCH_Ajax
 		]);
 	}
 
-	public function update_comment()
+	public function update_comment(): void
 	{
 		if (! current_user_can('manage_options')) {
 			wp_send_json_error(['message' => 'Forbidden'], 403);
@@ -285,7 +280,7 @@ class WPCH_Ajax
 	// Called when a Comment dialog opens: returns the comment as currently
 	// stored (the page it was rendered into may be minutes old), acquires
 	// this user's soft lock, and reports who else already has it open.
-	public function comment_open()
+	public function comment_open(): void
 	{
 		if (! current_user_can('manage_options')) {
 			wp_send_json_error(['message' => 'Forbidden'], 403);
@@ -310,7 +305,7 @@ class WPCH_Ajax
 		]);
 	}
 
-	public function comment_close()
+	public function comment_close(): void
 	{
 		if (! current_user_can('manage_options')) {
 			wp_send_json_error(['message' => 'Forbidden'], 403);
@@ -326,7 +321,7 @@ class WPCH_Ajax
 		wp_send_json_success();
 	}
 
-	public function delete_endpoint()
+	public function delete_endpoint(): void
 	{
 		if (! current_user_can('manage_options')) {
 			wp_send_json_error(['message' => 'Forbidden'], 403);
@@ -342,7 +337,7 @@ class WPCH_Ajax
 		wp_send_json_success();
 	}
 
-	public function refresh_statuses()
+	public function refresh_statuses(): void
 	{
 		if (! current_user_can('manage_options')) {
 			wp_send_json_error(['message' => 'Forbidden'], 403);

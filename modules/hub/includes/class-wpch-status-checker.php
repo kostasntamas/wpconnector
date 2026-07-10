@@ -11,12 +11,17 @@ class WPCH_Status_Checker
 {
 	const CACHE_KEY = 'wpch_status_cache';
 
+	// How many WordPress feature releases behind the latest a site may be and
+	// still count as healthy. More than this many releases behind grades the
+	// site 'deprecated', which lands it in the Needs Attention tab.
+	const MAX_HEALTHY_WP_GAP = 3;
+
 	// Per-endpoint fetch metadata for the most recent fetch_statuses() call,
 	// keyed like its input array: ['duration' => float|null seconds,
 	// 'cached' => bool, 'fetched_at' => unix time].
-	private $last_meta = [];
+	private array $last_meta = [];
 
-	public function get_meta($i)
+	public function get_meta(int $i): ?array
 	{
 		return isset($this->last_meta[$i]) ? $this->last_meta[$i] : null;
 	}
@@ -25,12 +30,12 @@ class WPCH_Status_Checker
 	// render from the cache with zero network calls. Override with
 	// WPCH_STATUS_CACHE_TTL in wp-config.php (0 disables caching); the
 	// Refresh button always bypasses it via $force.
-	private function cache_ttl()
+	private function cache_ttl(): int
 	{
 		return defined('WPCH_STATUS_CACHE_TTL') ? (int) WPCH_STATUS_CACHE_TTL : 120;
 	}
 
-	public function fetch_statuses(array $endpoints, $force = false)
+	public function fetch_statuses(array $endpoints, bool $force = false): array
 	{
 		$this->last_meta = [];
 
@@ -153,6 +158,8 @@ class WPCH_Status_Checker
 		return $statuses;
 	}
 
+	// $response is a \WpOrg\Requests\Response or a \Throwable from
+	// request_multiple(); returns the decoded payload array or a WP_Error.
 	private function parse_response($response)
 	{
 		if (! $response instanceof \WpOrg\Requests\Response) {
@@ -172,7 +179,7 @@ class WPCH_Status_Checker
 		return $body;
 	}
 
-	public function php_status($version)
+	public function php_status(string $version): array
 	{
 		if (version_compare($version, '8.2', '>=')) {
 			return ['label' => 'Good', 'tier' => 'good', 'color' => '#1a7f37'];
@@ -186,8 +193,11 @@ class WPCH_Status_Checker
 	// Grades how far behind the latest WordPress release a site is. WP
 	// versioning: X.Y are feature ("major") releases, X.Y.Z are maintenance/
 	// security releases within the X.Y branch. 'label' is the display text,
-	// 'tier' (good/aging/deprecated) feeds site_health().
-	public function wp_status($status)
+	// 'tier' feeds site_health(): a site stays 'good' (Healthy) as long as its
+	// gap to the latest release is at most MAX_HEALTHY_WP_GAP feature releases
+	// (missing maintenance/security releases count as no gap); anything further
+	// behind is 'deprecated' and lands in the Needs Attention tab.
+	public function wp_status(array $status): array
 	{
 		if (empty($status['wp_update_available'])) {
 			return ['label' => 'Up to date', 'tier' => 'good', 'color' => '#1a7f37'];
@@ -199,9 +209,10 @@ class WPCH_Status_Checker
 		$current_branch = [$current[0], isset($current[1]) ? $current[1] : 0];
 		$latest_branch  = [$latest[0], isset($latest[1]) ? $latest[1] : 0];
 
-		// Same X.Y branch — only a maintenance/security release is missing.
+		// Same X.Y branch — only a maintenance/security release is missing,
+		// which is no version gap at all, so the site still counts as healthy.
 		if ($current_branch === $latest_branch) {
-			return ['label' => 'Security update', 'tier' => 'aging', 'color' => '#c98a00'];
+			return ['label' => 'Security update', 'tier' => 'good', 'color' => '#c98a00'];
 		}
 
 		// Feature releases behind is only countable within the same first
@@ -209,10 +220,11 @@ class WPCH_Status_Checker
 		// first number is at least several releases behind either way.
 		$behind = $current_branch[0] === $latest_branch[0] ? $latest_branch[1] - $current_branch[1] : null;
 
-		if (1 === $behind) {
-			return ['label' => '1 release behind', 'tier' => 'aging', 'color' => '#c98a00'];
+		if (null !== $behind && $behind <= self::MAX_HEALTHY_WP_GAP) {
+			$label = 1 === $behind ? '1 release behind' : $behind . ' releases behind';
+			return ['label' => $label, 'tier' => 'good', 'color' => '#c98a00'];
 		}
-		if (null !== $behind && $behind > 1) {
+		if (null !== $behind) {
 			return ['label' => $behind . ' releases behind', 'tier' => 'deprecated', 'color' => '#b32d2e'];
 		}
 		return ['label' => 'Very old', 'tier' => 'deprecated', 'color' => '#b32d2e'];
@@ -220,7 +232,7 @@ class WPCH_Status_Checker
 
 	// The Core value of the Auto Updates column. Returns null when the status
 	// payload predates the core_auto_update field (endpoint plugin < 2.1).
-	public function core_auto_update_status($status)
+	public function core_auto_update_status(array $status): ?array
 	{
 		if (! isset($status['core_auto_update'])) {
 			return null;
@@ -236,7 +248,7 @@ class WPCH_Status_Checker
 		return ['label' => ucfirst($status['core_auto_update']), 'color' => '#c98a00'];
 	}
 
-	public function site_health($is_error, $php_status = null, $wp_status = null)
+	public function site_health(bool $is_error, ?array $php_status = null, ?array $wp_status = null): array
 	{
 		if ($is_error) {
 			return ['label' => 'Offline', 'color' => '#b32d2e'];

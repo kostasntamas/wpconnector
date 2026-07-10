@@ -3,7 +3,7 @@
 /**
  * Plugin Name: WP Connector
  * Description: WP Connector Endpoint and Hub combined. Choose per site whether it acts as a monitored Endpoint, as the monitoring Hub, or as both (for testing).
- * Version: 2.1.0.2
+ * Version: 2.1.1
  * Requires at least: 4.7
  * Requires PHP: 7.4
  */
@@ -12,20 +12,20 @@ if (! defined('ABSPATH')) {
 	exit;
 }
 
-define('WPC_VERSION', '2.1.0.2');
+define('WPC_VERSION', '2.1.1');
 define('WPC_PLUGIN_FILE', __FILE__);
 define('WPC_PLUGIN_DIR', plugin_dir_path(__FILE__));
 
 /**
  * Current mode: 'endpoint', 'hub', 'both', or '' when setup hasn't run yet.
  */
-function wpc_get_mode()
+function wpc_get_mode(): string
 {
 	$mode = get_option('wpc_mode', '');
-	return in_array($mode, array('endpoint', 'hub', 'both'), true) ? $mode : '';
+	return in_array($mode, ['endpoint', 'hub', 'both'], true) ? $mode : '';
 }
 
-function wpc_mode_has($module)
+function wpc_mode_has(string $module): bool
 {
 	$mode = wpc_get_mode();
 	return 'both' === $mode || $module === $mode;
@@ -37,11 +37,11 @@ function wpc_mode_has($module)
  * would fatal on redeclared functions/classes, so the module is skipped and
  * an admin notice asks for the standalone plugin to be removed instead.
  */
-function wpc_legacy_plugin_active($basename)
+function wpc_legacy_plugin_active(string $basename): bool
 {
-	$active = (array) get_option('active_plugins', array());
+	$active = (array) get_option('active_plugins', []);
 	if (is_multisite()) {
-		$active = array_merge($active, array_keys((array) get_site_option('active_sitewide_plugins', array())));
+		$active = array_merge($active, array_keys((array) get_site_option('active_sitewide_plugins', [])));
 	}
 	foreach ($active as $file) {
 		if (basename($file) === $basename) {
@@ -52,7 +52,7 @@ function wpc_legacy_plugin_active($basename)
 }
 
 register_activation_hook(__FILE__, 'wpc_activate');
-function wpc_activate()
+function wpc_activate(): void
 {
 	if (! wpc_get_mode()) {
 		update_option('wpc_setup_redirect', 1);
@@ -62,7 +62,7 @@ function wpc_activate()
 	}
 }
 
-function wpc_ensure_endpoint_key()
+function wpc_ensure_endpoint_key(): void
 {
 	if (! get_option('wpce_secret_key')) {
 		update_option('wpce_secret_key', wp_generate_password(32, false));
@@ -90,7 +90,7 @@ add_action('admin_init', function () {
 	check_admin_referer('wpc_save_mode');
 
 	$mode = sanitize_key($_POST['wpc_mode']);
-	if (! in_array($mode, array('endpoint', 'hub', 'both'), true)) {
+	if (! in_array($mode, ['endpoint', 'hub', 'both'], true)) {
 		return;
 	}
 
@@ -100,7 +100,7 @@ add_action('admin_init', function () {
 	}
 
 	wp_safe_redirect(add_query_arg(
-		array('page' => 'wpconnector', 'wpc-updated' => 1),
+		['page' => 'wpconnector', 'wpc-updated' => 1],
 		admin_url('options-general.php')
 	));
 	exit;
@@ -110,7 +110,7 @@ add_action('admin_menu', function () {
 	add_options_page('WP Connector', 'WP Connector', 'manage_options', 'wpconnector', 'wpc_settings_page');
 });
 
-function wpc_settings_page()
+function wpc_settings_page(): void
 {
 	$mode  = wpc_get_mode();
 	$saved = isset($_GET['wpc-updated']);
@@ -171,13 +171,13 @@ function wpc_settings_page()
 <?php
 }
 
-function wpc_mode_label($mode)
+function wpc_mode_label(string $mode): string
 {
-	$labels = array(
+	$labels = [
 		'endpoint' => 'Endpoint only',
 		'hub'      => 'Hub only',
 		'both'     => 'Both (Endpoint + Hub)',
-	);
+	];
 	return isset($labels[$mode]) ? $labels[$mode] : $mode;
 }
 
@@ -192,7 +192,7 @@ add_action('admin_notices', function () {
 	);
 });
 
-add_filter('plugin_action_links_' . plugin_basename(__FILE__), function ($links) {
+add_filter('plugin_action_links_' . plugin_basename(__FILE__), function (array $links): array {
 	array_unshift($links, sprintf(
 		'<a href="%s">%s</a>',
 		esc_url(admin_url('options-general.php?page=wpconnector')),

@@ -1,27 +1,21 @@
 <?php
-require 'functions.php';
 
 if (! defined('ABSPATH')) {
 	exit;
 }
-
-
 
 /**
  * Settings page: menu registration, asset loading, form handling and rendering.
  */
 class WPCH_Admin_Page
 {
-	/** @var WPCH_Endpoints */
-	private $endpoints;
+	private WPCH_Endpoints $endpoints;
 
-	/** @var WPCH_Folders */
-	private $folders;
+	private WPCH_Folders $folders;
 
-	/** @var WPCH_Status_Checker */
-	private $status_checker;
+	private WPCH_Status_Checker $status_checker;
 
-	private $hook_suffix;
+	private ?string $hook_suffix = null;
 
 	public function __construct(WPCH_Endpoints $endpoints, WPCH_Folders $folders, WPCH_Status_Checker $status_checker)
 	{
@@ -30,7 +24,7 @@ class WPCH_Admin_Page
 		$this->status_checker = $status_checker;
 	}
 
-	public function register_menu()
+	public function register_menu(): void
 	{
 		$this->hook_suffix = add_menu_page(
 			'WP Connector Hub',
@@ -45,7 +39,7 @@ class WPCH_Admin_Page
 		add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
 	}
 
-	public function enqueue_assets($hook_suffix)
+	public function enqueue_assets(string $hook_suffix): void
 	{
 		if ($hook_suffix !== $this->hook_suffix) {
 			return;
@@ -121,7 +115,7 @@ class WPCH_Admin_Page
 
 		// Default admin heartbeat is 60s; tighten it on this screen only so
 		// comment-editing badges appear/disappear within ~15s.
-		add_filter('heartbeat_settings', function ($settings) {
+		add_filter('heartbeat_settings', function (array $settings): array {
 			$settings['interval'] = 15;
 			return $settings;
 		});
@@ -134,7 +128,7 @@ class WPCH_Admin_Page
 		);
 	}
 
-	public function dequeue_admin_styles()
+	public function dequeue_admin_styles(): void
 	{
 		global $wp_styles;
 
@@ -148,7 +142,7 @@ class WPCH_Admin_Page
 		}
 	}
 
-	public function maybe_handle_actions()
+	public function maybe_handle_actions(): void
 	{
 		if (isset($_GET['page']) && 'wpconnectorhub' === $_GET['page']) {
 			add_filter('show_admin_bar', '__return_false');
@@ -156,7 +150,7 @@ class WPCH_Admin_Page
 		}
 	}
 
-	private function handle_form_actions()
+	private function handle_form_actions(): void
 	{
 		if (isset($_GET['wpch_delete'])) {
 			$index = (int) $_GET['wpch_delete'];
@@ -176,7 +170,7 @@ class WPCH_Admin_Page
 		if (isset($_POST['wpch_action']) && check_admin_referer('wpch_manage')) {
 			$action = sanitize_text_field($_POST['wpch_action']);
 
-			if ('add' === $action && ! empty($_POST['new_url'])) {
+			if ('add' === $action && ! empty($_POST['new_url']) && is_string($_POST['new_url'])) {
 				$this->endpoints->add([
 					'url'       => esc_url_raw(WPCH_Endpoints::normalize_url($_POST['new_url'])),
 					'key'       => isset($_POST['new_key']) ? sanitize_text_field(trim($_POST['new_key'])) : '',
@@ -203,7 +197,7 @@ class WPCH_Admin_Page
 		}
 	}
 
-	private function export_json()
+	private function export_json(): void
 	{
 		$endpoints = array_map(function ($endpoint) {
 			$endpoint['url'] = WPCH_Endpoints::display_url($endpoint['url']);
@@ -223,7 +217,7 @@ class WPCH_Admin_Page
 	}
 
 	// Returns an error slug on failure, or null on success.
-	private function import_json()
+	private function import_json(): ?string
 	{
 		if (empty($_FILES['import_file']['tmp_name']) || UPLOAD_ERR_OK !== $_FILES['import_file']['error']) {
 			return 'file';
@@ -254,7 +248,7 @@ class WPCH_Admin_Page
 		$seen_ids  = [];
 		$max_order = 0;
 		foreach ($decoded['endpoints'] as $row) {
-			if (empty($row['url'])) {
+			if (empty($row['url']) || ! is_string($row['url'])) {
 				continue;
 			}
 			// Keep ids/orders from the export when present (so display order
@@ -273,7 +267,7 @@ class WPCH_Admin_Page
 				'key'       => isset($row['key']) ? sanitize_text_field($row['key']) : '',
 				'folder_id' => isset($row['folder_id']) ? sanitize_text_field($row['folder_id']) : '',
 				'comment'   => isset($row['comment']) ? wp_kses_post($row['comment']) : '',
-				'tag'       => isset($row['tag']) ? WPCH_Endpoints::sanitize_tag($row['tag']) : '',
+				'tag'       => isset($row['tag']) && is_string($row['tag']) ? WPCH_Endpoints::sanitize_tag($row['tag']) : '',
 				'order'     => $order,
 			];
 		}
@@ -290,7 +284,7 @@ class WPCH_Admin_Page
 		return null;
 	}
 
-	public function render_color_swatches($name, $suffix, $selected = null)
+	public function render_color_swatches(string $name, string $suffix, ?string $selected = null): string
 	{
 		$presets = $this->folders->color_presets();
 		if (null === $selected) {
@@ -312,7 +306,7 @@ class WPCH_Admin_Page
 		return $html;
 	}
 
-	public function render_folder_picker_fields($suffix, $folders, $selected_folder_id = '')
+	public function render_folder_picker_fields(string $suffix, array $folders, string $selected_folder_id = ''): void
 	{
 		$folder_by_id = [];
 		foreach ($folders as $folder) {
@@ -342,7 +336,7 @@ class WPCH_Admin_Page
 	// the rows' 'order' field. Sections appear in order of their first
 	// (lowest-order) row, so the ungrouped block can sit anywhere in the table —
 	// including above all folders.
-	public function build_sections(array $endpoints, array $folders)
+	public function build_sections(array $endpoints, array $folders): array
 	{
 		$folder_by_id = [];
 		foreach ($folders as $folder) {
@@ -374,7 +368,7 @@ class WPCH_Admin_Page
 	// Maps each endpoint's array key (which gets gappy after deletions) to a
 	// contiguous 1..N display number, in the same section order the table is
 	// rendered in.
-	public function compute_positions(array $endpoints, array $folders)
+	public function compute_positions(array $endpoints, array $folders): array
 	{
 		$positions = [];
 		$n         = 0;
@@ -389,7 +383,7 @@ class WPCH_Admin_Page
 
 	// Lowercases and strips a leading "www." so www.test.com and test.com
 	// count as the same domain for duplicate detection.
-	private static function domain_key($domain)
+	private static function domain_key(string $domain): string
 	{
 		$domain = strtolower($domain);
 		return 0 === strpos($domain, 'www.') ? substr($domain, 4) : $domain;
@@ -399,7 +393,7 @@ class WPCH_Admin_Page
 	// it, purely so the row can flag "this domain is also used elsewhere" —
 	// rows keep their own key/folder/comment regardless, nothing here merges
 	// or dedupes them.
-	public function compute_domain_counts(array $endpoints)
+	public function compute_domain_counts(array $endpoints): array
 	{
 		$counts = [];
 		foreach ($endpoints as $endpoint) {
@@ -415,7 +409,7 @@ class WPCH_Admin_Page
 
 	// The colored difficulty pill shown next to the domain (main table and
 	// health tabs). Prints nothing for untagged rows or unknown slugs.
-	public function render_tag_badge($tag)
+	public function render_tag_badge(string $tag): void
 	{
 		$presets = WPCH_Endpoints::tag_presets();
 		if ('' === $tag || ! isset($presets[$tag])) {
@@ -432,7 +426,7 @@ class WPCH_Admin_Page
 	// button and its <dialog>. Shared by the main table rows and the health-tab
 	// tier rows — $dialog_id must be unique per rendered cell since the dialog
 	// markup lives inline next to the button.
-	public function render_plugins_cell($dialog_id, $row_label, $status)
+	public function render_plugins_cell(string $dialog_id, string $row_label, array $status): void
 	{
 	?>
 		<td>
@@ -506,7 +500,7 @@ class WPCH_Admin_Page
 	// The Auto Updates <td>: the site's core auto-update policy plus how many
 	// plugins have auto-updates switched on. Endpoints still running a plugin
 	// version that doesn't report these fields render an em dash.
-	public function render_auto_updates_cell($status)
+	public function render_auto_updates_cell(array $status): void
 	{
 		$core = $this->status_checker->core_auto_update_status($status);
 	?>
@@ -530,7 +524,9 @@ class WPCH_Admin_Page
 	<?php
 	}
 
-	public function render_endpoint_row($i, $endpoint, $status, $in_folder, $folders = [], $position = null, $domain_counts = [])
+	// $status is the endpoint's decoded payload array, or a WP_Error when the
+	// site was unreachable — it can't be type-hinted on PHP 7.4 (no unions).
+	public function render_endpoint_row(int $i, array $endpoint, $status, bool $in_folder, array $folders = [], ?int $position = null, array $domain_counts = []): void
 	{
 		$is_error   = is_wp_error($status);
 		$domain     = wp_parse_url($endpoint['url'], PHP_URL_HOST);
@@ -666,7 +662,7 @@ class WPCH_Admin_Page
 	// tabs. Everything in here sits in #wpch-health-tabs-swap, which the
 	// Refresh AJAX response replaces wholesale — the main table panel lives
 	// outside the swap so its DOM (dialogs, listeners) survives a refresh.
-	public function render_health_tabs(array $endpoints, array $statuses)
+	public function render_health_tabs(array $endpoints, array $statuses): void
 	{
 		$tiers = [
 			'Healthy'         => '#1a7f37',
@@ -758,7 +754,18 @@ class WPCH_Admin_Page
 	<?php
 	}
 
-	public function render_settings_page()
+	// The user's initials for the sidebar avatar: first letters of the first
+	// and last name parts, or the first two letters of a single-word name.
+	private static function initials(string $name): string
+	{
+		$parts = array_filter(explode(' ', trim($name)));
+		if (count($parts) >= 2) {
+			return strtoupper(mb_substr($parts[0], 0, 1) . mb_substr(end($parts), 0, 1));
+		}
+		return strtoupper(mb_substr($name, 0, 2));
+	}
+
+	public function render_settings_page(): void
 	{
 		$endpoints = $this->endpoints->get_all();
 		$folders   = $this->folders->get_all();
@@ -797,7 +804,7 @@ class WPCH_Admin_Page
 						<strong>User Name</strong>
 						<div style="display: flex; gap: 1ch; justify-content: space-between; align-items: flex-end;">
 							<div id="user-<?php echo esc_attr($current_user->ID); ?>" class="profile" style="border-radius: 100vmax; aspect-ratio: 1 / 1; padding: .2em .6em; background: lightblue; display: flex; width: fit-content;align-items: center; justify-content: center; color: black;">
-								<?php echo htmlspecialchars(initials($current_user->user_login)); ?>
+								<?php echo htmlspecialchars(self::initials($current_user->user_login)); ?>
 							</div>
 							<?php echo '<a href="' . wp_logout_url(home_url()) . '">Logout</a>'; ?>
 						</div>
