@@ -483,13 +483,15 @@ class WPCH_Admin_Page
 									<div class="grid-info<?php echo (! empty($plugin['update_available'])) ? ' updates' : ''; ?>">
 										<?php echo esc_html($plugin['name']); ?>
 										<b><?php echo ' v' . $plugin['version']; ?></b>
-										<?php if (! empty($plugin['auto_update'])) : ?>
-											<span style="color:#1a7f37;" title="Auto-updates enabled for this plugin"> &#8635; auto</span>
-										<?php endif; ?>
 										<?php if (! empty($plugin['update_available'])) : ?>
 											<span style="color:#c98a00;"> &rarr; update to v<?php echo esc_html($plugin['new_version']); ?> available</span>
 										<?php endif; ?>
-										<span style="color:<?php echo $plugin['active'] ? '#1a7f37' : '#b32d2e'; ?>;"><?php echo $plugin['active'] ? ' (active)' : ' (inactive)'; ?></span>
+										<div class="updates-info">
+											<?php if (! empty($plugin['auto_update'])) : ?>
+												<span style="color:#1a7f37;" title="Auto-updates enabled for this plugin"> &#8635; auto</span>
+											<?php endif; ?>
+											<span style="color:<?php echo $plugin['active'] ? '#1a7f37' : '#b32d2e'; ?>;"><?php echo $plugin['active'] ? ' (active)' : ' (inactive)'; ?></span>
+										</div>
 									</div>
 								<?php endforeach; ?>
 							<?php endforeach; ?>
