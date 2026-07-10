@@ -175,25 +175,65 @@ class WPCH_Status_Checker
 	public function php_status($version)
 	{
 		if (version_compare($version, '8.2', '>=')) {
-			return ['label' => 'Good', 'color' => '#1a7f37'];
+			return ['label' => 'Good', 'tier' => 'good', 'color' => '#1a7f37'];
 		}
 		if (version_compare($version, '8.0', '>=')) {
-			return ['label' => 'Aging', 'color' => '#c98a00'];
+			return ['label' => 'Aging', 'tier' => 'aging', 'color' => '#c98a00'];
 		}
-		return ['label' => 'Deprecated', 'color' => '#b32d2e'];
+		return ['label' => 'Deprecated', 'tier' => 'deprecated', 'color' => '#b32d2e'];
 	}
 
+	// Grades how far behind the latest WordPress release a site is. WP
+	// versioning: X.Y are feature ("major") releases, X.Y.Z are maintenance/
+	// security releases within the X.Y branch. 'label' is the display text,
+	// 'tier' (good/aging/deprecated) feeds site_health().
 	public function wp_status($status)
 	{
 		if (empty($status['wp_update_available'])) {
-			return ['label' => 'Good', 'color' => '#1a7f37'];
+			return ['label' => 'Up to date', 'tier' => 'good', 'color' => '#1a7f37'];
 		}
-		$current_major = (int) strtok($status['wp_version'], '.');
-		$latest_major   = (int) strtok(isset($status['wp_latest_version']) ? $status['wp_latest_version'] : $status['wp_version'], '.');
-		if ($current_major < $latest_major) {
-			return ['label' => 'Deprecated', 'color' => '#b32d2e'];
+
+		$latest_version = isset($status['wp_latest_version']) ? $status['wp_latest_version'] : $status['wp_version'];
+		$current        = array_map('intval', explode('.', $status['wp_version']));
+		$latest         = array_map('intval', explode('.', $latest_version));
+		$current_branch = [$current[0], isset($current[1]) ? $current[1] : 0];
+		$latest_branch  = [$latest[0], isset($latest[1]) ? $latest[1] : 0];
+
+		// Same X.Y branch — only a maintenance/security release is missing.
+		if ($current_branch === $latest_branch) {
+			return ['label' => 'Security update', 'tier' => 'aging', 'color' => '#c98a00'];
 		}
-		return ['label' => 'Aging', 'color' => '#c98a00'];
+
+		// Feature releases behind is only countable within the same first
+		// number (the minor resets on e.g. 6.9 -> 7.0); a site on an older
+		// first number is at least several releases behind either way.
+		$behind = $current_branch[0] === $latest_branch[0] ? $latest_branch[1] - $current_branch[1] : null;
+
+		if (1 === $behind) {
+			return ['label' => '1 release behind', 'tier' => 'aging', 'color' => '#c98a00'];
+		}
+		if (null !== $behind && $behind > 1) {
+			return ['label' => $behind . ' releases behind', 'tier' => 'deprecated', 'color' => '#b32d2e'];
+		}
+		return ['label' => 'Very old', 'tier' => 'deprecated', 'color' => '#b32d2e'];
+	}
+
+	// The Core value of the Auto Updates column. Returns null when the status
+	// payload predates the core_auto_update field (endpoint plugin < 2.1).
+	public function core_auto_update_status($status)
+	{
+		if (! isset($status['core_auto_update'])) {
+			return null;
+		}
+		switch ($status['core_auto_update']) {
+			case 'all':
+				return ['label' => 'All updates', 'color' => '#1a7f37'];
+			case 'minor':
+				return ['label' => 'Minor only', 'color' => '#50575e'];
+			case 'disabled':
+				return ['label' => 'Disabled', 'color' => '#b32d2e'];
+		}
+		return ['label' => ucfirst($status['core_auto_update']), 'color' => '#c98a00'];
 	}
 
 	public function site_health($is_error, $php_status = null, $wp_status = null)
@@ -201,10 +241,10 @@ class WPCH_Status_Checker
 		if ($is_error) {
 			return ['label' => 'Offline', 'color' => '#b32d2e'];
 		}
-		if ('Deprecated' === $php_status['label'] || 'Deprecated' === $wp_status['label']) {
+		if ('deprecated' === $php_status['tier'] || 'deprecated' === $wp_status['tier']) {
 			return ['label' => 'Needs Attention', 'color' => '#b32d2e'];
 		}
-		if ('Aging' === $php_status['label'] || 'Aging' === $wp_status['label']) {
+		if ('aging' === $php_status['tier'] || 'aging' === $wp_status['tier']) {
 			return ['label' => 'Fair', 'color' => '#c98a00'];
 		}
 		return ['label' => 'Healthy', 'color' => '#1a7f37'];

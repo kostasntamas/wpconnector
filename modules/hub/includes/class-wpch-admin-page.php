@@ -483,6 +483,9 @@ class WPCH_Admin_Page
 									<div class="grid-info<?php echo (! empty($plugin['update_available'])) ? ' updates' : ''; ?>">
 										<?php echo esc_html($plugin['name']); ?>
 										<b><?php echo ' v' . $plugin['version']; ?></b>
+										<?php if (! empty($plugin['auto_update'])) : ?>
+											<span style="color:#1a7f37;" title="Auto-updates enabled for this plugin"> &#8635; auto</span>
+										<?php endif; ?>
 										<?php if (! empty($plugin['update_available'])) : ?>
 											<span style="color:#c98a00;"> &rarr; update to v<?php echo esc_html($plugin['new_version']); ?> available</span>
 										<?php endif; ?>
@@ -493,6 +496,33 @@ class WPCH_Admin_Page
 						</div>
 					</div>
 				</dialog>
+			<?php endif; ?>
+		</td>
+	<?php
+	}
+
+	// The Auto Updates <td>: the site's core auto-update policy plus how many
+	// plugins have auto-updates switched on. Endpoints still running a plugin
+	// version that doesn't report these fields render an em dash.
+	public function render_auto_updates_cell($status)
+	{
+		$core = $this->status_checker->core_auto_update_status($status);
+	?>
+		<td style="white-space:nowrap;">
+			<?php if (null === $core && ! isset($status['plugins_auto_update'])) : ?>
+				<span title="Update the WP Connector plugin on this site to report auto-update settings">&mdash;</span>
+			<?php else : ?>
+				<?php if (null !== $core) : ?>
+					<span title="Core auto-updates: 'Minor only' installs maintenance/security releases automatically (the WordPress default), 'All updates' also installs major releases.">Core: <span style="color:<?php echo esc_attr($core['color']); ?>;font-weight:500;"><?php echo esc_html($core['label']); ?></span></span>
+				<?php endif; ?>
+				<?php if (isset($status['plugins_auto_update'])) : ?>
+					<br>
+					<?php if (isset($status['plugins_auto_update_supported']) && ! $status['plugins_auto_update_supported']) : ?>
+						<span title="Plugin auto-updates are unavailable on this site (disabled by a constant or filter, e.g. DISALLOW_FILE_MODS).">Plugins: <span style="color:#b32d2e;font-weight:500;">unavailable</span></span>
+					<?php else : ?>
+						<span title="Plugins with auto-updates enabled / total installed plugins">Plugins: <span style="color:<?php echo $status['plugins_auto_update'] > 0 ? '#1a7f37' : '#50575e'; ?>;font-weight:500;"><?php echo (int) $status['plugins_auto_update']; ?> / <?php echo (int) $status['plugins_total']; ?></span></span>
+					<?php endif; ?>
+				<?php endif; ?>
 			<?php endif; ?>
 		</td>
 	<?php
@@ -546,11 +576,12 @@ class WPCH_Admin_Page
 			</td>
 			<?php /* <td><input type="text" data-type="secret-key" name="endpoints[<?php echo esc_attr($i); ?>][key]" value="<?php echo esc_attr($endpoint['key']); ?>"></td> */ ?>
 			<?php if ($is_error) : ?>
-				<td colspan="4" style="color:#b32d2e;">Error: <?php echo esc_html($status->get_error_message()); ?></td>
+				<td colspan="5" style="color:#b32d2e;">Error: <?php echo esc_html($status->get_error_message()); ?></td>
 			<?php else : ?>
-				<td><?php echo esc_html($status['wp_version']); ?> <span style="color:<?php echo esc_attr($wp_status['color']); ?>;">(<?php echo esc_html($wp_status['label']); ?>)</span></td>
+				<td><?php echo esc_html($status['wp_version']); ?> <span style="color:<?php echo esc_attr($wp_status['color']); ?>;" <?php if (! empty($status['wp_update_available']) && ! empty($status['wp_latest_version'])) : ?>title="<?php echo esc_attr('Latest: ' . $status['wp_latest_version']); ?>" <?php endif; ?>>(<?php echo esc_html($wp_status['label']); ?>)</span></td>
 				<td><?php echo esc_html($status['php_version']); ?> <span style="color:<?php echo esc_attr($php_status['color']); ?>;">(<?php echo esc_html($php_status['label']); ?>)</span></td>
 				<?php $this->render_plugins_cell('wpch-plugins-' . $i, $row_label, $status); ?>
+				<?php $this->render_auto_updates_cell($status); ?>
 				<td><?php echo esc_html($status['themes_installed']); ?></td>
 			<?php endif; ?>
 			<td>
@@ -697,6 +728,7 @@ class WPCH_Admin_Page
 									<th scope="col">WP Version</th>
 									<th scope="col">PHP Version</th>
 									<th scope="col">Plugins <small>( total / active / inactive )</small></th>
+									<th scope="col">Auto Updates</th>
 								<?php endif; ?>
 							</tr>
 						</thead>
@@ -709,9 +741,10 @@ class WPCH_Admin_Page
 									<?php if ('Offline' === $label) : ?>
 										<td style="text-align: left"><?php echo esc_html($row['error']); ?></td>
 									<?php else : ?>
-										<td><?php echo esc_html($row['wp']['version']); ?> <span style="color:<?php echo esc_attr($row['wp']['tier']['color']); ?>;">(<?php echo esc_html($row['wp']['tier']['label']); ?>)</span></td>
+										<td><?php echo esc_html($row['wp']['version']); ?> <span style="color:<?php echo esc_attr($row['wp']['tier']['color']); ?>;" <?php if (! empty($row['status']['wp_update_available']) && ! empty($row['status']['wp_latest_version'])) : ?>title="<?php echo esc_attr('Latest: ' . $row['status']['wp_latest_version']); ?>" <?php endif; ?>>(<?php echo esc_html($row['wp']['tier']['label']); ?>)</span></td>
 										<td><?php echo esc_html($row['php']['version']); ?> <span style="color:<?php echo esc_attr($row['php']['tier']['color']); ?>;">(<?php echo esc_html($row['php']['tier']['label']); ?>)</span></td>
 										<?php $this->render_plugins_cell('wpch-health-plugins-' . sanitize_title($label) . '-' . $n, $row['domain'], $row['status']); ?>
+										<?php $this->render_auto_updates_cell($row['status']); ?>
 									<?php endif; ?>
 								</tr>
 							<?php endforeach; ?>
@@ -814,6 +847,7 @@ class WPCH_Admin_Page
 											<th scope="col">WP Version</th>
 											<th scope="col">PHP Version</th>
 											<th scope="col">Plugins <small>( total / active / inactive )</small></th>
+											<th scope="col">Auto Updates</th>
 											<th scope="col">Themes</th>
 											<th scope="col">Settings</th>
 										</tr>
@@ -823,7 +857,7 @@ class WPCH_Admin_Page
 											<?php $folder = $section['folder']; ?>
 											<tbody class="folder" draggable="true" data-folder-id="<?php echo esc_attr($folder['id']); ?>" style="--style:<?php echo esc_attr($folder['color']); ?>;">
 												<tr class="parent-row">
-													<td colspan="9" style="text-align: left">
+													<td colspan="10" style="text-align: left">
 														<input type="checkbox" <?php checked(! isset($open_states[$folder['id']]) || $open_states[$folder['id']]); ?> id="wpch-folder-toggle-<?php echo esc_attr($folder['id']); ?>">
 														<label for="wpch-folder-toggle-<?php echo esc_attr($folder['id']); ?>">
 															<?php echo esc_html($folder['name']); ?>
@@ -866,7 +900,7 @@ class WPCH_Admin_Page
 										<?php else : ?>
 											<tbody class="non-folder" id="wpch-tbody-ungrouped" draggable="true" style="--style:#e7e7e7;">
 												<tr class="parent-row">
-													<td colspan="9" style="text-align: left">
+													<td colspan="10" style="text-align: left">
 														<input type="checkbox" <?php checked(! isset($open_states['ungrouped']) || $open_states['ungrouped']); ?> id="wpch-folder-toggle-ungrouped">
 														<label for="wpch-folder-toggle-ungrouped">
 															Ungrouped

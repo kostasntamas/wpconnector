@@ -428,7 +428,6 @@ label.wpch-swatch {
 	--tab-color: #666;
 	padding: 0.6em 1.1em;
 	font-size: 0.9em;
-	font-weight: 500;
 	color: var(--tab-color);
 	background: #fff;
 	border: 1px solid #c3c4c7;
