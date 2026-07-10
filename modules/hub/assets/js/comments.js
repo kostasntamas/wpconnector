@@ -33,13 +33,13 @@ function wpchPositionCommentPopover(pop, index) {
 	// pop.style.inset = 'auto';
 	var width = pop.offsetWidth;
 	var height = pop.offsetHeight;
-	var left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
-	var top = rect.bottom + 6;
-	if (top + height > window.innerHeight - 8) {
-		top = Math.max(8, rect.top - height - 6);
-	}
-	pop.style.left = left + 'px';
-	pop.style.top = top + 'px';
+	// var left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+	// var top = rect.bottom + 6;
+	// if (top + height > window.innerHeight - 8) {
+	// 	top = Math.max(8, rect.top - height - 6);
+	// }
+	// pop.style.left = left + 'px';
+	// pop.style.top = top + 'px';
 }
 
 function wpchOpenComment(index) {
