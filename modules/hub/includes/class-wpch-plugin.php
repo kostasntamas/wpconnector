@@ -19,7 +19,7 @@ class WPCH_Plugin
 
 	private WPCH_Ajax $ajax;
 
-	private WPCH_Comment_Locks $comment_locks;
+	private WPCH_Comment_Sync $comment_sync;
 
 	public function __construct()
 	{
@@ -27,8 +27,8 @@ class WPCH_Plugin
 		$this->folders        = new WPCH_Folders();
 		$this->status_checker = new WPCH_Status_Checker();
 		$this->admin_page     = new WPCH_Admin_Page($this->endpoints, $this->folders, $this->status_checker);
-		$this->comment_locks  = new WPCH_Comment_Locks();
-		$this->ajax           = new WPCH_Ajax($this->endpoints, $this->folders, $this->status_checker, $this->admin_page, $this->comment_locks);
+		$this->comment_sync   = new WPCH_Comment_Sync($this->endpoints, $this->admin_page);
+		$this->ajax           = new WPCH_Ajax($this->endpoints, $this->folders, $this->status_checker, $this->admin_page);
 	}
 
 	public function init(): void
@@ -41,6 +41,6 @@ class WPCH_Plugin
 		add_action('admin_init', [$this->endpoints, 'migrate_legacy']);
 
 		$this->ajax->register();
-		$this->comment_locks->register();
+		$this->comment_sync->register();
 	}
 }

@@ -23,7 +23,7 @@ require_once WPCH_PLUGIN_DIR . 'includes/class-wpch-endpoints.php';
 require_once WPCH_PLUGIN_DIR . 'includes/class-wpch-folders.php';
 require_once WPCH_PLUGIN_DIR . 'includes/class-wpch-status-checker.php';
 require_once WPCH_PLUGIN_DIR . 'includes/class-wpch-admin-page.php';
-require_once WPCH_PLUGIN_DIR . 'includes/class-wpch-comment-locks.php';
+require_once WPCH_PLUGIN_DIR . 'includes/class-wpch-comment-sync.php';
 require_once WPCH_PLUGIN_DIR . 'includes/class-wpch-ajax.php';
 require_once WPCH_PLUGIN_DIR . 'includes/class-wpch-plugin.php';
 

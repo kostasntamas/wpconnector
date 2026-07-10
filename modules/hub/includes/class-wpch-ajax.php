@@ -17,15 +17,12 @@ class WPCH_Ajax
 
 	private WPCH_Admin_Page $admin_page;
 
-	private WPCH_Comment_Locks $comment_locks;
-
-	public function __construct(WPCH_Endpoints $endpoints, WPCH_Folders $folders, WPCH_Status_Checker $status_checker, WPCH_Admin_Page $admin_page, WPCH_Comment_Locks $comment_locks)
+	public function __construct(WPCH_Endpoints $endpoints, WPCH_Folders $folders, WPCH_Status_Checker $status_checker, WPCH_Admin_Page $admin_page)
 	{
 		$this->endpoints      = $endpoints;
 		$this->folders        = $folders;
 		$this->status_checker = $status_checker;
 		$this->admin_page     = $admin_page;
-		$this->comment_locks  = $comment_locks;
 	}
 
 	public function register(): void
@@ -34,9 +31,9 @@ class WPCH_Ajax
 		add_action('wp_ajax_wpch_delete_endpoint', [$this, 'delete_endpoint']);
 		add_action('wp_ajax_wpch_refresh_statuses', [$this, 'refresh_statuses']);
 		add_action('wp_ajax_wpch_update_endpoint', [$this, 'update_endpoint']);
-		add_action('wp_ajax_wpch_update_comment', [$this, 'update_comment']);
-		add_action('wp_ajax_wpch_comment_open', [$this, 'comment_open']);
-		add_action('wp_ajax_wpch_comment_close', [$this, 'comment_close']);
+		add_action('wp_ajax_wpch_comment_add', [$this, 'comment_add']);
+		add_action('wp_ajax_wpch_comment_delete', [$this, 'comment_delete']);
+		add_action('wp_ajax_wpch_comment_fetch', [$this, 'comment_fetch']);
 		add_action('wp_ajax_wpch_reorder', [$this, 'reorder']);
 		add_action('wp_ajax_wpch_folder_state', [$this, 'folder_state']);
 	}
@@ -120,7 +117,7 @@ class WPCH_Ajax
 			'url'       => esc_url_raw(WPCH_Endpoints::normalize_url($_POST['new_url'])),
 			'key'       => isset($_POST['new_key']) ? sanitize_text_field(trim($_POST['new_key'])) : '',
 			'folder_id' => $this->folders->resolve_choice($_POST),
-			'comment'   => '',
+			'comments'  => [],
 			'tag'       => '',
 		];
 
@@ -231,81 +228,25 @@ class WPCH_Ajax
 		]);
 	}
 
-	public function update_comment(): void
+	// Shared success response of the comment endpoints: the freshly-rendered
+	// thread HTML (the popover swaps it in wholesale), a revision hash for the
+	// heartbeat live-refresh to compare against, and the total message count
+	// for the row button's badge.
+	private function send_thread(int $index, array $comments): void
 	{
-		if (! current_user_can('manage_options')) {
-			wp_send_json_error(['message' => 'Forbidden'], 403);
-		}
-
-		check_ajax_referer('wpch_manage');
-
-		$index     = isset($_POST['index']) ? (int) $_POST['index'] : -1;
-		$endpoints = $this->endpoints->get_all();
-
-		if (! isset($endpoints[$index])) {
-			wp_send_json_error(['message' => 'Site not found.']);
-		}
-
-		$stored  = isset($endpoints[$index]['comment']) ? $endpoints[$index]['comment'] : '';
-		// Comments are rich text (lilac-editor) as of 1.3.0 — keep the HTML but
-		// strip anything a post author couldn't use (scripts, event handlers…).
-		$comment = isset($_POST['comment']) ? wp_kses_post(wp_unslash($_POST['comment'])) : '';
-
-		// Optimistic-lock check: the dialog sends back the comment text it was
-		// opened with; if the stored value changed in between (someone else
-		// saved first), refuse instead of silently overwriting their edit —
-		// admin.js then offers "load theirs" or "overwrite anyway" (force=1).
-		// base_comment is absent from older cached JS; behave as before then.
-		if (isset($_POST['base_comment']) && empty($_POST['force'])) {
-			$base = wp_kses_post(wp_unslash($_POST['base_comment']));
-			if ($base !== $stored && $comment !== $stored) {
-				$by   = ! empty($endpoints[$index]['comment_author']) ? $endpoints[$index]['comment_author'] : 'someone else';
-				$when = ! empty($endpoints[$index]['comment_updated']) ? ' ' . human_time_diff((int) $endpoints[$index]['comment_updated'], time()) . ' ago' : '';
-				wp_send_json_error([
-					'code'            => 'conflict',
-					'message'         => sprintf('This comment was changed by %s%s while you were editing.', $by, $when),
-					'current_comment' => $stored,
-				]);
-			}
-		}
-
-		$endpoints[$index]['comment']         = $comment;
-		$endpoints[$index]['comment_author']  = wp_get_current_user()->display_name;
-		$endpoints[$index]['comment_updated'] = time();
-		$this->endpoints->save($endpoints);
-
-		wp_send_json_success(['comment' => $endpoints[$index]['comment']]);
-	}
-
-	// Called when a Comment dialog opens: returns the comment as currently
-	// stored (the page it was rendered into may be minutes old), acquires
-	// this user's soft lock, and reports who else already has it open.
-	public function comment_open(): void
-	{
-		if (! current_user_can('manage_options')) {
-			wp_send_json_error(['message' => 'Forbidden'], 403);
-		}
-
-		check_ajax_referer('wpch_manage');
-
-		$index     = isset($_POST['index']) ? (int) $_POST['index'] : -1;
-		$endpoints = $this->endpoints->get_all();
-
-		if (! isset($endpoints[$index])) {
-			wp_send_json_error(['message' => 'Site not found.']);
-		}
-
-		$id        = $endpoints[$index]['id'];
-		$locked_by = $this->comment_locks->holder_name($id);
-		$this->comment_locks->acquire($id);
+		ob_start();
+		$this->admin_page->render_comments($index, $comments);
 
 		wp_send_json_success([
-			'comment'   => isset($endpoints[$index]['comment']) ? $endpoints[$index]['comment'] : '',
-			'locked_by' => $locked_by,
+			'html'  => ob_get_clean(),
+			'rev'   => WPCH_Admin_Page::comments_rev($comments),
+			'count' => count($comments),
 		]);
 	}
 
-	public function comment_close(): void
+	// Returns [$index, $endpoints, $comments] for the row in $_POST['index'],
+	// or sends an error response. Used by the three comment endpoints.
+	private function require_comment_row(): array
 	{
 		if (! current_user_can('manage_options')) {
 			wp_send_json_error(['message' => 'Forbidden'], 403);
@@ -313,12 +254,104 @@ class WPCH_Ajax
 
 		check_ajax_referer('wpch_manage');
 
-		$id = isset($_POST['endpoint_id']) ? sanitize_text_field(wp_unslash($_POST['endpoint_id'])) : '';
-		if ('' !== $id) {
-			$this->comment_locks->release($id);
+		$index     = isset($_POST['index']) ? (int) $_POST['index'] : -1;
+		$endpoints = $this->endpoints->get_all();
+
+		if (! isset($endpoints[$index])) {
+			wp_send_json_error(['message' => 'Site not found.']);
 		}
 
-		wp_send_json_success();
+		$comments = isset($endpoints[$index]['comments']) && is_array($endpoints[$index]['comments']) ? $endpoints[$index]['comments'] : [];
+
+		return [$index, $endpoints, $comments];
+	}
+
+	// Appends a chat message (or a reply, when 'parent' is a comment id) to
+	// the row's thread. Append-only, so unlike the old single-comment save
+	// there is no overwrite conflict to guard against.
+	public function comment_add(): void
+	{
+		list($index, $endpoints, $comments) = $this->require_comment_row();
+
+		$text = isset($_POST['text']) && is_string($_POST['text']) ? sanitize_textarea_field(wp_unslash($_POST['text'])) : '';
+		if ('' === trim($text)) {
+			wp_send_json_error(['message' => 'Comment text is required.']);
+		}
+
+		$parent = isset($_POST['parent']) ? sanitize_text_field(wp_unslash($_POST['parent'])) : '';
+		if ('' !== $parent) {
+			$parent_entry = null;
+			foreach ($comments as $entry) {
+				if ($entry['id'] === $parent) {
+					$parent_entry = $entry;
+					break;
+				}
+			}
+			if (! $parent_entry) {
+				wp_send_json_error(['message' => 'The comment you replied to no longer exists.']);
+			}
+			// Replies nest one level only — replying to a reply attaches to its
+			// top-level message instead.
+			if ('' !== $parent_entry['parent']) {
+				$parent = $parent_entry['parent'];
+			}
+		}
+
+		$user       = wp_get_current_user();
+		$comments[] = [
+			'id'        => WPCH_Endpoints::generate_comment_id(),
+			'parent'    => $parent,
+			'author_id' => (int) $user->ID,
+			'author'    => $user->display_name,
+			'time'      => time(),
+			'text'      => $text,
+		];
+
+		$endpoints[$index]['comments'] = $comments;
+		$this->endpoints->save($endpoints);
+
+		$this->send_thread($index, $comments);
+	}
+
+	// Deletes one of the current user's own messages; a top-level message
+	// takes its replies with it.
+	public function comment_delete(): void
+	{
+		list($index, $endpoints, $comments) = $this->require_comment_row();
+
+		$comment_id = isset($_POST['comment_id']) ? sanitize_text_field(wp_unslash($_POST['comment_id'])) : '';
+		$target     = null;
+		foreach ($comments as $entry) {
+			if ($entry['id'] === $comment_id) {
+				$target = $entry;
+				break;
+			}
+		}
+
+		if (! $target) {
+			wp_send_json_error(['message' => 'Comment not found — it may already be deleted.']);
+		}
+		if ((int) $target['author_id'] !== get_current_user_id()) {
+			wp_send_json_error(['message' => 'You can only delete your own comments.']);
+		}
+
+		$comments = array_values(array_filter($comments, function (array $entry) use ($comment_id): bool {
+			return $entry['id'] !== $comment_id && $entry['parent'] !== $comment_id;
+		}));
+
+		$endpoints[$index]['comments'] = $comments;
+		$this->endpoints->save($endpoints);
+
+		$this->send_thread($index, $comments);
+	}
+
+	// Called when a comment popover opens: re-renders the thread as currently
+	// stored (the page it was rendered into may be minutes old).
+	public function comment_fetch(): void
+	{
+		list($index, , $comments) = $this->require_comment_row();
+
+		$this->send_thread($index, $comments);
 	}
 
 	public function delete_endpoint(): void

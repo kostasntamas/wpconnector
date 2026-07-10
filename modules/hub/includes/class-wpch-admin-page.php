@@ -72,16 +72,6 @@ class WPCH_Admin_Page
 			WPCH_VERSION
 		);
 
-		// Rich-text editor for the per-row Comment dialogs. Vendored IIFE bundle
-		// of @lilac-wysiwyg/core (see assets/js/vendor/), exposes window.LilacWysiwyg.
-		wp_enqueue_script(
-			'wpch-lilac',
-			WPCH_PLUGIN_URL . 'assets/js/vendor/lilac-editor.js',
-			[],
-			WPCH_VERSION,
-			true
-		);
-
 		// Core endpoint-table handlers (add/delete/refresh/edit) — vanilla JS.
 		wp_enqueue_script(
 			'wpch-admin',
@@ -101,24 +91,18 @@ class WPCH_Admin_Page
 			true
 		);
 
-		// Comment collaboration (dialogs, locks, badges). jquery + heartbeat
-		// power the "X is editing this comment" badges: the Heartbeat API's
+		// Per-row comment chat popovers. jquery + heartbeat power the live
+		// refresh of an open thread (WPCH_Comment_Sync): the Heartbeat API's
 		// send/tick events are jQuery events on document, so that part can't
 		// be vanilla. Depends on wpch-admin for wpchGetManageNonce().
 		wp_enqueue_script(
 			'wpch-comments',
 			WPCH_PLUGIN_URL . 'assets/js/comments.js',
-			['jquery', 'heartbeat', 'wpch-lilac', 'wpch-admin'],
+			['jquery', 'heartbeat', 'wpch-admin'],
 			WPCH_VERSION,
 			true
 		);
 
-		// Default admin heartbeat is 60s; tighten it on this screen only so
-		// comment-editing badges appear/disappear within ~15s.
-		add_filter('heartbeat_settings', function (array $settings): array {
-			$settings['interval'] = 15;
-			return $settings;
-		});
 		wp_enqueue_script(
 			'wpch-draggable',
 			WPCH_PLUGIN_URL . 'assets/js/draggable.js',
@@ -175,7 +159,7 @@ class WPCH_Admin_Page
 					'url'       => esc_url_raw(WPCH_Endpoints::normalize_url($_POST['new_url'])),
 					'key'       => isset($_POST['new_key']) ? sanitize_text_field(trim($_POST['new_key'])) : '',
 					'folder_id' => $this->folders->resolve_choice($_POST),
-					'comment'   => '',
+					'comments'  => [],
 					'tag'       => '',
 				]);
 			} elseif ('edit_folder' === $action && ! empty($_POST['folder_id'])) {
@@ -259,6 +243,16 @@ class WPCH_Admin_Page
 			}
 			$seen_ids[$id] = true;
 
+			// Chat threads from current exports; a pre-2.2 export's single
+			// 'comment' field becomes the thread's first message instead.
+			$comments = isset($row['comments']) && is_array($row['comments']) ? WPCH_Endpoints::sanitize_comments($row['comments']) : [];
+			if (! $comments) {
+				$legacy = WPCH_Endpoints::legacy_comment_entry($row);
+				if ($legacy) {
+					$comments = [$legacy];
+				}
+			}
+
 			$order       = isset($row['order']) ? (int) $row['order'] : 0;
 			$max_order   = max($max_order, $order);
 			$endpoints[] = [
@@ -266,7 +260,7 @@ class WPCH_Admin_Page
 				'url'       => esc_url_raw(WPCH_Endpoints::normalize_url($row['url'])),
 				'key'       => isset($row['key']) ? sanitize_text_field($row['key']) : '',
 				'folder_id' => isset($row['folder_id']) ? sanitize_text_field($row['folder_id']) : '',
-				'comment'   => isset($row['comment']) ? wp_kses_post($row['comment']) : '',
+				'comments'  => $comments,
 				'tag'       => isset($row['tag']) && is_string($row['tag']) ? WPCH_Endpoints::sanitize_tag($row['tag']) : '',
 				'order'     => $order,
 			];
@@ -534,7 +528,7 @@ class WPCH_Admin_Page
 		$wp_status  = $is_error ? null : $this->status_checker->wp_status($status);
 		$health     = $this->status_checker->site_health($is_error, $php_status, $wp_status);
 		$folder_id  = isset($endpoint['folder_id']) ? $endpoint['folder_id'] : '';
-		$comment    = isset($endpoint['comment']) ? $endpoint['comment'] : '';
+		$comments   = isset($endpoint['comments']) && is_array($endpoint['comments']) ? $endpoint['comments'] : [];
 		$tag        = isset($endpoint['tag']) ? $endpoint['tag'] : '';
 		$comment_icon = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><!-- Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE --><path fill="currentColor" d="M6 14h12v-2H6zm0-3h12V9H6zm0-3h12V6H6zm16 14l-4-4H4q-.825 0-1.412-.587T2 16V4q0-.825.588-1.412T4 2h16q.825 0 1.413.588T22 4zM4 16h14.85L20 17.125V4H4zm0 0V4z"/></svg>';
 		$row_label     = $domain ? $domain : $endpoint['url'];
@@ -589,7 +583,7 @@ class WPCH_Admin_Page
 							<path fill="currentColor" d="M3 21v-4.25L16.2 3.575q.3-.275.663-.425t.762-.15t.775.15t.65.45L20.425 5q.3.275.438.65T21 6.4q0 .4-.137.763t-.438.662L7.25 21zM17.6 7.8L19 6.4L17.6 5l-1.4 1.4z" />
 						</svg>
 					</button>
-					<button type="button" class="button comment-btn" onclick="wpchOpenComment(<?php echo (int) $i; ?>)"><?php echo $comment ? $comment_icon . ' &bull;' : $comment_icon; ?></button>
+					<button type="button" class="button comment-btn" onclick="wpchOpenComment(<?php echo (int) $i; ?>)"><?php echo $comment_icon; ?><?php if ($comments) : ?><span class="wpch-comment-count"><?php echo count($comments); ?></span><?php endif; ?></button>
 					<a href="<?php echo esc_url(wp_nonce_url(add_query_arg('wpch_delete', $i), 'wpch_delete_' . $i)); ?>" class="wpch-delete-link" data-index="<?php echo esc_attr($i); ?>" data-folder-id="<?php echo esc_attr($folder_id); ?>" onclick="return confirm('Delete this endpoint?');" style="color:#b32d2e;">Delete</a>
 					<button type="button" class="move">
 						<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
@@ -630,25 +624,27 @@ class WPCH_Admin_Page
 					</div>
 				</dialog>
 
-				<dialog id="wpch-comment-dialog-<?php echo esc_attr($i); ?>" style="max-width: 800px; width: 100%;">
-					<div style="padding:16px;">
-						<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-							<strong>Comment &mdash; <?php echo esc_html($row_label); ?></strong>
-							<button type="button" commandfor="wpch-comment-dialog-<?php echo esc_attr($i); ?>" command="close" class="button">Close</button>
-						</div>
-						<?php // Filled by admin.js: "X is editing right now" while open, and the load-theirs/overwrite choice on a save conflict. 
-						?>
-						<div class="wpch-comment-notice" id="wpch-comment-notice-<?php echo esc_attr($i); ?>" style="display:none;"></div>
-						<?php // lilac-editor mounts here on first open (admin.js). data-comment carries
-						// the raw stored comment (HTML, or plain text from pre-1.3 saves) and is kept
-						// in sync by admin.js after saves/refreshes so reopening shows the latest.
-						?>
-						<div class="wpch-comment-editor" id="wpch-comment-editor-<?php echo esc_attr($i); ?>" data-comment="<?php echo esc_attr($comment); ?>"></div>
-						<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
-							<button type="button" class="button button-primary" onclick="wpchSaveComment(<?php echo (int) $i; ?>)">Save</button>
-						</div>
+				<?php
+				// Chat popover, anchored next to the row's comment button by
+				// comments.js (which also fetches the fresh thread on open and
+				// live-refreshes it over Heartbeat while open). popover="auto"
+				// = light dismiss; an unsent draft survives because hiding a
+				// popover keeps its DOM, and the composer sits outside the
+				// thread container that refreshes swap.
+				?>
+				<div class="wpch-comment-popover" popover id="wpch-comment-popover-<?php echo esc_attr($i); ?>">
+					<div class="wpch-comment-head">
+						<strong>Comments &mdash; <?php echo esc_html($row_label); ?></strong>
+						<button type="button" class="button" popovertarget="wpch-comment-popover-<?php echo esc_attr($i); ?>" popovertargetaction="hide">Close</button>
 					</div>
-				</dialog>
+					<div class="wpch-comment-thread" id="wpch-comment-thread-<?php echo esc_attr($i); ?>" data-rev="<?php echo esc_attr(self::comments_rev($comments)); ?>">
+						<?php $this->render_comments($i, $comments); ?>
+					</div>
+					<div class="wpch-comment-composer">
+						<textarea id="wpch-comment-input-<?php echo esc_attr($i); ?>" rows="2" placeholder="Write a comment&hellip; (Enter sends, Shift+Enter for a new line)" onkeydown="wpchComposerKeydown(event, <?php echo (int) $i; ?>, '')"></textarea>
+						<button type="button" class="button button-primary" onclick="wpchSendComment(<?php echo (int) $i; ?>, '')">Send</button>
+					</div>
+				</div>
 			</td>
 		</tr>
 	<?php
@@ -754,8 +750,103 @@ class WPCH_Admin_Page
 	<?php
 	}
 
-	// The user's initials for the sidebar avatar: first letters of the first
-	// and last name parts, or the first two letters of a single-word name.
+	// Revision hash of a row's comment thread — sent with every thread render
+	// so comments.js can tell whether a heartbeat's version differs from what
+	// the open popover already shows.
+	public static function comments_rev(array $comments): string
+	{
+		return md5((string) wp_json_encode(array_values($comments)));
+	}
+
+	// The inner HTML of a row's comment popover thread: top-level messages in
+	// time order, each followed by its replies (one level deep) and a hidden
+	// inline reply composer. Also the payload of the comment AJAX and
+	// heartbeat responses, so the client only ever swaps this container's
+	// innerHTML wholesale.
+	public function render_comments(int $i, array $comments): void
+	{
+		if (! $comments) {
+			echo '<p class="wpch-comment-empty">No comments yet.</p>';
+			return;
+		}
+
+		$tops    = [];
+		$replies = [];
+		foreach ($comments as $entry) {
+			if (! empty($entry['parent'])) {
+				$replies[$entry['parent']][] = $entry;
+			} else {
+				$tops[] = $entry;
+			}
+		}
+		// Replies whose top-level message is gone (shouldn't happen — deletes
+		// cascade — but old/imported data may) surface as top-level messages
+		// rather than vanishing.
+		foreach ($replies as $parent_id => $orphans) {
+			foreach ($tops as $top) {
+				if ($top['id'] === $parent_id) {
+					continue 2;
+				}
+			}
+			foreach ($orphans as $orphan) {
+				$tops[] = $orphan;
+			}
+			unset($replies[$parent_id]);
+		}
+
+		$by_time = function (array $a, array $b): int {
+			return (int) $a['time'] <=> (int) $b['time'];
+		};
+		usort($tops, $by_time);
+
+		foreach ($tops as $top) {
+			$this->render_comment_msg($i, $top, true);
+			$children = isset($replies[$top['id']]) ? $replies[$top['id']] : [];
+			usort($children, $by_time);
+		?>
+			<div class="wpch-comment-replies">
+				<?php foreach ($children as $child) : ?>
+					<?php $this->render_comment_msg($i, $child, false); ?>
+				<?php endforeach; ?>
+				<div class="wpch-reply-composer" id="wpch-reply-composer-<?php echo esc_attr($i . '-' . $top['id']); ?>" hidden>
+					<textarea id="wpch-reply-input-<?php echo esc_attr($i . '-' . $top['id']); ?>" rows="2" placeholder="Reply&hellip;" onkeydown="wpchComposerKeydown(event, <?php echo (int) $i; ?>, '<?php echo esc_js($top['id']); ?>')"></textarea>
+					<button type="button" class="button" onclick="wpchSendComment(<?php echo (int) $i; ?>, '<?php echo esc_js($top['id']); ?>')">Reply</button>
+				</div>
+			</div>
+		<?php
+		}
+	}
+
+	// One chat message: avatar, author + relative time, plain text (newlines
+	// preserved via white-space:pre-wrap), delete for own messages and Reply
+	// on top-level ones.
+	private function render_comment_msg(int $i, array $entry, bool $is_top): void
+	{
+		$author  = isset($entry['author']) && '' !== $entry['author'] ? $entry['author'] : 'Unknown';
+		$is_mine = (int) $entry['author_id'] === get_current_user_id() && 0 !== (int) $entry['author_id'];
+	?>
+		<div class="wpch-comment-msg<?php echo $is_mine ? ' is-mine' : ''; ?>">
+			<span class="wpch-comment-avatar"><?php echo esc_html(self::initials($author)); ?></span>
+			<div class="wpch-comment-body">
+				<div class="wpch-comment-meta">
+					<strong><?php echo esc_html($author); ?></strong>
+					<span title="<?php echo esc_attr(wp_date('Y-m-d H:i', (int) $entry['time'])); ?>"><?php echo esc_html(human_time_diff((int) $entry['time'], time())); ?> ago</span>
+					<?php if ($is_top) : ?>
+						<button type="button" class="wpch-comment-action" onclick="wpchToggleReply(<?php echo (int) $i; ?>, '<?php echo esc_js($entry['id']); ?>')">Reply</button>
+					<?php endif; ?>
+					<?php if ($is_mine) : ?>
+						<button type="button" class="wpch-comment-action wpch-comment-delete" title="<?php echo esc_attr($is_top ? 'Delete this comment and its replies' : 'Delete this reply'); ?>" onclick="wpchDeleteComment(<?php echo (int) $i; ?>, '<?php echo esc_js($entry['id']); ?>')">&times;</button>
+					<?php endif; ?>
+				</div>
+				<div class="wpch-comment-text"><?php echo esc_html($entry['text']); ?></div>
+			</div>
+		</div>
+	<?php
+	}
+
+	// A user's initials for the sidebar and comment avatars: first letters of
+	// the first and last name parts, or the first two letters of a single-word
+	// name.
 	private static function initials(string $name): string
 	{
 		$parts = array_filter(explode(' ', trim($name)));

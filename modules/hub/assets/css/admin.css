@@ -216,42 +216,158 @@ td strong {
 	border: 1px solid contrast-color(var(--tag-color));
 }
 
-.wpch-editing-badge {
-	display: inline-block;
-	padding: 0.05em 0.45em;
+/* --- Comment chat popover (comments.js positions it next to the row's
+   comment button) ---------------------------------------------------------- */
+
+.wpch-comment-count {
+	padding: 0 0.5em;
 	font-size: 0.75em;
-	font-weight: 500;
-	white-space: nowrap;
-	color: #7a4a00;
-	background: #ffe6a8;
-	border: 1px solid #d99a00;
-	border-radius: 3px;
-	cursor: help;
+	font-weight: 600;
+	line-height: 1.6;
+	color: #fff;
+	background: #2271b1;
+	border-radius: 100vmax;
 }
 
-.wpch-comment-notice {
+.wpch-comment-popover {
+	width: 420px;
+	max-width: calc(100vw - 16px);
+	padding: 0;
+	overflow: visible;
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 8px;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.wpch-comment-head {
 	display: flex;
 	align-items: center;
-	flex-wrap: wrap;
-	gap: 0.6em;
-	margin-bottom: 8px;
-	padding: 0.5em 0.8em;
-	font-size: 0.9em;
-	background: #fff8e5;
-	border-left: 4px solid #d99a00;
+	justify-content: space-between;
+	gap: 1em;
+	padding: 10px 12px;
+	border-bottom: 1px solid #e5e5e5;
 }
 
-.wpch-comment-notice[data-type='conflict'] {
-	background: #fff0f0;
-	border-left-color: #b32d2e;
+.wpch-comment-thread {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	max-height: 45vh;
+	padding: 12px;
+	overflow: auto;
+	overscroll-behavior: contain;
+	text-align: left;
 }
 
-.wpch-comment-notice .button {
+.wpch-comment-empty {
+	margin: 0;
+	font-size: 0.85em;
+	color: #777;
+	text-align: center;
+}
+
+.wpch-comment-msg {
+	display: flex;
+	gap: 8px;
+}
+
+.wpch-comment-avatar {
+	display: flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	font-size: 0.7em;
+	font-weight: 600;
+	color: #000;
+	background: lightblue;
+	border-radius: 50%;
+}
+
+.wpch-comment-body {
+	flex: 1;
+	min-width: 0;
+	padding: 6px 10px;
+	background: #f0f0f1;
+	border-radius: 10px;
+}
+
+.wpch-comment-msg.is-mine .wpch-comment-body {
+	background: #e7f0fa;
+}
+
+.wpch-comment-meta {
+	display: flex;
+	gap: 0.7em;
+	align-items: baseline;
+	font-size: 0.78em;
+	color: #50575e;
+}
+
+.wpch-comment-meta strong {
+	color: #1d2327;
+}
+
+.wpch-comment-action {
+	padding: 0;
+	font-size: 1em;
+	color: #2271b1;
 	cursor: pointer;
-	padding: 0.1em 0.6em;
-	border: 1px solid gray;
-	border-radius: 3px;
-	background: white;
+	background: none;
+	border: none;
+}
+
+.wpch-comment-delete {
+	margin-left: auto;
+	font-size: 1.15em;
+	line-height: 1;
+	color: #b32d2e;
+}
+
+.wpch-comment-text {
+	font-size: 0.85em;
+	overflow-wrap: anywhere;
+	white-space: pre-wrap;
+}
+
+/* Indented under the parent message; holds the replies and that comment's
+   inline reply composer. Collapses entirely (no flex gap) while everything
+   inside is hidden. */
+.wpch-comment-replies {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-left: 36px;
+}
+
+.wpch-comment-replies:not(:has(> :not([hidden]))) {
+	display: none;
+}
+
+.wpch-reply-composer,
+.wpch-comment-composer {
+	display: flex;
+	gap: 8px;
+	align-items: flex-end;
+}
+
+.wpch-comment-composer {
+	padding: 10px 12px;
+	border-top: 1px solid #e5e5e5;
+}
+
+.wpch-reply-composer textarea,
+.wpch-comment-composer textarea {
+	flex: 1;
+	min-width: 0;
+	padding: 6px 8px;
+	font: inherit;
+	font-size: 0.85em;
+	resize: none;
+	border: 1px solid #c3c4c7;
+	border-radius: 6px;
 }
 
 tbody {
@@ -378,8 +494,8 @@ tr.child-row:last-child {
 		top: anchor(bottom --input);
 		right: anchor(left --folder);
 		bottom: anchor(center --last-folder-item);
-		border-left: 2px dashed var(--folder);
-		border-bottom: 2px dashed var(--folder);
+		border-left: 1px dashed color-mix(in hsl, var(--folder), black);
+		border-bottom: 1px dashed color-mix(in hsl, var(--folder), black);
 		border-radius: 0 0 0 100vmax;
 	}
 }

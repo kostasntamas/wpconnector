@@ -1,5 +1,5 @@
 // Core endpoint-table handlers: add/delete/refresh/edit and the row/count
-// renumbering shared by the other scripts. Comment collaboration lives in
+// renumbering shared by the other scripts. The comment chat popovers live in
 // comments.js, the folder picker UI in folders.js, drag-and-drop in
 // draggable.js.
 
