@@ -504,7 +504,7 @@ class WPCH_Admin_Page
 	{
 		$core = $this->status_checker->core_auto_update_status($status);
 	?>
-		<td style="white-space:nowrap;">
+		<td style="white-space:nowrap; text-align:start;">
 			<?php if (null === $core && ! isset($status['plugins_auto_update'])) : ?>
 				<span title="Update the WP Connector plugin on this site to report auto-update settings">&mdash;</span>
 			<?php else : ?>
@@ -512,7 +512,7 @@ class WPCH_Admin_Page
 					<span title="Core auto-updates: 'Minor only' installs maintenance/security releases automatically (the WordPress default), 'All updates' also installs major releases.">Core: <span style="color:<?php echo esc_attr($core['color']); ?>;font-weight:500;"><?php echo esc_html($core['label']); ?></span></span>
 				<?php endif; ?>
 				<?php if (isset($status['plugins_auto_update'])) : ?>
-					<br>
+					<hr>
 					<?php if (isset($status['plugins_auto_update_supported']) && ! $status['plugins_auto_update_supported']) : ?>
 						<span title="Plugin auto-updates are unavailable on this site (disabled by a constant or filter, e.g. DISALLOW_FILE_MODS).">Plugins: <span style="color:#b32d2e;font-weight:500;">unavailable</span></span>
 					<?php else : ?>
