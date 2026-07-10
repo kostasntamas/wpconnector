@@ -119,7 +119,9 @@ function wpc_settings_page()
 		<h1>WP Connector</h1>
 
 		<?php if ($saved) : ?>
-			<div class="notice notice-success is-dismissible"><p>Mode saved. The selected modules are now active.</p></div>
+			<div class="notice notice-success is-dismissible">
+				<p>Mode saved. The selected modules are now active.</p>
+			</div>
 		<?php endif; ?>
 
 		<?php if (! $mode) : ?>
@@ -198,6 +200,32 @@ add_filter('plugin_action_links_' . plugin_basename(__FILE__), function ($links)
 	));
 	return $links;
 });
+
+// ---- Plugin updates ----
+// Runs in every mode (including before setup) so endpoint-only sites get
+// updates too. Checks the private Bitbucket repo for new version tags and
+// offers them as normal plugin updates. The read-only OAuth consumer
+// credentials are baked in below so no per-site setup is needed; defining
+// WPC_BITBUCKET_CONSUMER_KEY / WPC_BITBUCKET_CONSUMER_SECRET in wp-config.php
+// overrides them (useful when rotating the consumer).
+
+require_once WPC_PLUGIN_DIR . 'plugin-update-checker/plugin-update-checker.php';
+
+$wpc_update_checker = \YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
+	'https://bitbucket.org/limecreatives/wpconnector/',
+	WPC_PLUGIN_FILE,
+	'wpconnector'
+);
+$wpc_update_checker->setBranch('main');
+
+$wpc_bb_key    = defined('WPC_BITBUCKET_CONSUMER_KEY') ? WPC_BITBUCKET_CONSUMER_KEY : 'PASTE-CONSUMER-KEY-HERE';
+$wpc_bb_secret = defined('WPC_BITBUCKET_CONSUMER_SECRET') ? WPC_BITBUCKET_CONSUMER_SECRET : 'PASTE-CONSUMER-SECRET-HERE';
+if (false === strpos($wpc_bb_key, 'PASTE-')) {
+	$wpc_update_checker->setAuthentication(array(
+		'consumer_key'    => $wpc_bb_key,
+		'consumer_secret' => $wpc_bb_secret,
+	));
+}
 
 // ---- Load the selected modules ----
 

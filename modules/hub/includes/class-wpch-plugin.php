@@ -4,8 +4,6 @@ if (! defined('ABSPATH')) {
 	exit;
 }
 
-use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
-
 /**
  * Main plugin bootstrap: wires up services and registers WordPress hooks.
  */
@@ -41,7 +39,8 @@ class WPCH_Plugin
 
 	public function init()
 	{
-		$this->init_update_checker();
+		// The plugin update checker is initialized in wpconnector.php so it
+		// runs in every mode, not only when the hub module is loaded.
 
 		add_action('admin_menu', [$this->admin_page, 'register_menu']);
 		add_action('admin_init', [$this->admin_page, 'maybe_handle_actions']);
@@ -49,26 +48,5 @@ class WPCH_Plugin
 
 		$this->ajax->register();
 		$this->comment_locks->register();
-	}
-
-	private function init_update_checker()
-	{
-		require_once WPCH_PLUGIN_DIR . 'plugin-update-checker/plugin-update-checker.php';
-
-		// Checks github.com/kostasntamas/wpconnector for new Releases and offers
-		// them as normal plugin updates. Must NOT point at the old standalone
-		// wpconnectorhub repo, or its releases would replace this merged plugin.
-		// If the repo is private, a token with at least read-only "Contents"
-		// access must be defined in wp-config.php:
-		// define('WPCH_GITHUB_TOKEN', 'ghp_xxxxxxxxxxxxxxxxxxxx');
-		$update_checker = PucFactory::buildUpdateChecker(
-			'https://github.com/kostasntamas/wpconnector/',
-			WPCH_PLUGIN_FILE,
-			'wpconnector'
-		);
-		$update_checker->setBranch('main');
-		// if (defined('WPCH_GITHUB_TOKEN') && WPCH_GITHUB_TOKEN) {
-		// 	$update_checker->setAuthentication(WPCH_GITHUB_TOKEN);
-		// }
 	}
 }

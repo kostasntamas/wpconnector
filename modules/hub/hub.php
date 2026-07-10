@@ -6,8 +6,8 @@
  * Bootstraps the hub dashboard (menu: WP Connector Hub). Loaded by
  * wpconnector.php when the mode is 'hub' or 'both'. The WPCH_* constants the
  * classes rely on are defined here: DIR/URL point at this module folder so
- * requires and asset enqueues resolve, while PLUGIN_FILE stays the merged
- * plugin's main file so the update checker targets the right plugin.
+ * requires and asset enqueues resolve. The plugin update checker lives in
+ * wpconnector.php (plugin-wide, runs in every mode), not in this module.
  */
 
 if (! defined('ABSPATH')) {
