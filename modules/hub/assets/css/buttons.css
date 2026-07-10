@@ -48,7 +48,6 @@ button.button[command='close'] {
 	line-height: 1;
 	border: none;
 	background: transparent;
-	color: contrast-color(var(--background));
 	color: color-mix(in hsl, var(--style), black);
 }
 .edits {
