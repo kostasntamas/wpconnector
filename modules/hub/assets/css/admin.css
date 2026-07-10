@@ -1,0 +1,457 @@
+.wpch-shell {
+	display: grid;
+	grid-template-columns: auto 1fr;
+}
+
+.grid-info {
+	display: grid;
+	grid-template-columns: 1fr 1fr auto;
+	gap: 1.3em;
+}
+.grid-info.updates {
+	grid-template-columns: 1fr 1fr 1fr auto;
+}
+
+.wpch-sidebar {
+	width: 220px;
+	flex-shrink: 0;
+	background: #1d2327;
+	color: #fff;
+	padding: 20px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	/* box-sizing: border-box; */
+	height: 100vh;
+	position: sticky;
+	top: 0;
+}
+
+.wpch-sidebar a {
+	color: #72aee6;
+}
+
+.wpch-sidebar a:hover {
+	color: #fff;
+}
+
+.wpch-io {
+	margin-top: 2em;
+	display: flex;
+	flex-direction: column;
+	gap: 0.6em;
+}
+
+.wpch-io form {
+	display: flex;
+	flex-direction: column;
+	gap: 0.4em;
+}
+
+.wpch-io input[type='file'] {
+	max-width: 100%;
+	min-width: 0;
+	color: #fff;
+}
+
+.wpch-notice {
+	background: #fff0f0;
+	border-left: 4px solid #b32d2e;
+	padding: 0.6em 1em;
+}
+
+.active {
+	color: #1a7f37;
+}
+
+.total {
+	color: #22a7f2;
+}
+
+.inactive {
+	color: #b32d2e;
+}
+
+.wrapper {
+	padding-block: 3rem;
+	inline-size: min(100% - 4.2rem, 1600px);
+	margin-inline: auto;
+	min-block-size: 100dvb;
+}
+.wrapper > *:not(dialog) + *:not(dialog) {
+	margin-top: 1em;
+}
+
+.wpch-folder-count {
+	font-weight: 400;
+	opacity: 0.7;
+	font-size: 0.9em;
+}
+
+.wpch-total-count {
+	font-weight: 400;
+	opacity: 0.7;
+	font-size: 0.7em;
+}
+
+table {
+	min-inline-size: 0;
+	inline-size: 100%;
+	border-collapse: collapse;
+}
+
+tr.dragging {
+	opacity: 0.4;
+}
+
+tbody.dragging-folder {
+	opacity: 0.5;
+}
+
+/* While a block is grabbed by its handle (mousedown, before/while dragging),
+only its header shows — hiding the rows keeps reflows cheap, makes the drop
+position visible, and (crucially) means no layout change happens at the
+moment the native drag initiates, which aborted drags of big blocks */
+tbody.drag-collapsed tr:not(.parent-row) {
+	display: none;
+}
+
+/* Don't let the browser's scroll anchoring pick a node inside the table —
+the fold-on-grab above would otherwise yank the scroll position mid-press */
+/* .wpch-status-table,
+.wpch-status-table * {
+	overflow-anchor: none;
+} */
+
+.wpch-fetch-meta {
+	display: block;
+	font-size: 0.7em;
+	opacity: 0.6;
+	white-space: nowrap;
+	cursor: help;
+}
+/* td .move {
+position-anchor: --row;
+right: anchor(right --row);
+top: anchor(center --row);
+} */
+
+.edit-folder {
+	padding: 0.15em 0.4em;
+	font-size: 0.85em;
+	font-weight: 400;
+	position: absolute;
+	position-anchor: --folder;
+	right: calc(anchor(right --folder) + 50px);
+	top: anchor(center --folder);
+	translate: 0 -50%;
+}
+
+thead {
+	border: 1px solid var(--tab-color, #00325c);
+}
+thead th {
+	border-right: 1px solid;
+	border-color: white;
+}
+thead,
+thead th {
+	position: sticky;
+	top: 10px;
+	background: var(--tab-color, #00325c);
+	text-transform: capitalize;
+	font-size: 1.025rem;
+	font-weight: 500;
+	color: white;
+	z-index: 1;
+}
+
+th,
+td {
+	text-align: center;
+	padding: 0 0.55em;
+	font-weight: 400;
+	font-size: small;
+}
+
+th {
+	padding-block: 0.4em;
+}
+td strong {
+	font-weight: 500;
+}
+
+.wpch-dup-badge {
+	display: inline-block;
+	margin-left: 0.4em;
+	padding: 0.05em 0.45em;
+	font-size: 0.75em;
+	font-weight: 500;
+	white-space: nowrap;
+	color: #7a4a00;
+	background: #ffe6a8;
+	border: 1px solid #d99a00;
+	border-radius: 3px;
+	cursor: help;
+}
+
+.wpch-tag {
+	display: inline-block;
+	margin-left: 0.4em;
+	padding: 0.25em 0.7em;
+	font-size: 0.8em;
+	font-weight: 400;
+	white-space: nowrap;
+	color: contrast-color(var(--tag-color));
+	background: var(--tag-color, #666);
+	border-radius: 100vmax;
+	border: 1px solid contrast-color(var(--tag-color));
+}
+
+.wpch-editing-badge {
+	display: inline-block;
+	padding: 0.05em 0.45em;
+	font-size: 0.75em;
+	font-weight: 500;
+	white-space: nowrap;
+	color: #7a4a00;
+	background: #ffe6a8;
+	border: 1px solid #d99a00;
+	border-radius: 3px;
+	cursor: help;
+}
+
+.wpch-comment-notice {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.6em;
+	margin-bottom: 8px;
+	padding: 0.5em 0.8em;
+	font-size: 0.9em;
+	background: #fff8e5;
+	border-left: 4px solid #d99a00;
+}
+
+.wpch-comment-notice[data-type='conflict'] {
+	background: #fff0f0;
+	border-left-color: #b32d2e;
+}
+
+.wpch-comment-notice .button {
+	cursor: pointer;
+	padding: 0.1em 0.6em;
+	border: 1px solid gray;
+	border-radius: 3px;
+	background: white;
+}
+
+tbody {
+	--folder: var(--style);
+	--background: color-mix(in hsl, var(--style), rgb(255, 255, 255));
+	--background-even: color-mix(in hsl, var(--style), rgb(240, 240, 240));
+
+	--border: hsl(from var(--style) h s calc(l - 45));
+	border: 1px dashed var(--border);
+	anchor-scope: --folder;
+
+	&:has(input[type='checkbox']:not(:checked)) tr:not(.parent-row) {
+		display: none;
+	}
+}
+
+.parent-row {
+	background: var(--folder);
+	color: contrast-color(var(--folder));
+	font-size: 1.125rem;
+	border-bottom: 1px dashed var(--border);
+	font-weight: bold;
+	anchor-name: --folder;
+
+	> td:first-child {
+		padding: 0px;
+
+		.drag {
+			position-anchor: --folder;
+			right: calc(anchor(right --folder) + 5px);
+			top: anchor(center --folder);
+		}
+
+		input {
+			cursor: pointer;
+			anchor-name: --input;
+			position: absolute;
+			position-anchor: --folder;
+			top: anchor(center);
+			right: calc(anchor(left) + 5px);
+			translate: 0 -50%;
+			z-index: 1;
+			appearance: none;
+			padding: 0;
+			font-weight: 400;
+			border: 1px solid var(--border);
+			border-radius: 3px;
+			inline-size: 18px;
+			block-size: 18px;
+			background: var(--background);
+			aspect-ratio: 1;
+
+			&:checked::after {
+				content: '\2212';
+			}
+
+			&:not(:checked)::after {
+				content: '\002B';
+			}
+
+			&::after {
+				color: contrast-color(var(--style));
+				inline-size: auto;
+				inset: 0;
+				position: absolute;
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				line-height: 1;
+				font-size: 0.8em;
+				margin-top: 1px;
+			}
+		}
+
+		label {
+			cursor: pointer;
+			padding: 0.35em;
+			font-size: 1.1em;
+			font-weight: 500;
+			inline-size: 100%;
+			display: block;
+			margin-left: 1ch;
+		}
+	}
+}
+
+tr:nth-child(even) {
+	background: color-mix(in hsl, var(--tab-color), rgb(240, 240, 240));
+	&:hover {
+		background-color: color-mix(in hsl, var(--tab-color), rgb(224, 224, 224));
+	}
+}
+
+tr.child-row:nth-child(even) {
+	background: var(--background-even);
+	&:hover {
+		background-color: color-mix(in hsl, var(--background-even), rgb(224, 224, 224));
+	}
+}
+
+tr.child-row {
+	border-bottom: 1px solid color-mix(in hsl, var(--border), white);
+	font-size: 0.95rem;
+	background: var(--background);
+	&:hover {
+		background-color: color-mix(in hsl, var(--background), rgb(194, 194, 194));
+	}
+}
+
+tr.child-row:last-child {
+	anchor-name: --last-folder-item;
+	anchor-scope: --last-folder-item;
+
+	&::after {
+		position-anchor: --folder;
+		content: '';
+		position: absolute;
+		left: anchor(center --input);
+		top: anchor(bottom --input);
+		right: anchor(left --folder);
+		bottom: anchor(center --last-folder-item);
+		border-left: 2px dashed var(--folder);
+		border-bottom: 2px dashed var(--folder);
+		border-radius: 0 0 0 100vmax;
+	}
+}
+
+label.wpch-swatch {
+	margin: 0;
+	aspect-ratio: 1;
+	max-width: 100%;
+	flex: 1;
+	width: 20px;
+	height: 20px;
+	border: 1px solid color-mix(in hsl, var(--swatch), black);
+	border-radius: 100vmax;
+	display: grid;
+	place-content: center;
+	cursor: pointer;
+
+	&::before {
+		content: '';
+		width: 40%;
+		height: 40%;
+		width: 12px;
+		height: 12px;
+		aspect-ratio: 1;
+		border-radius: 50vw;
+		transform: scale(0);
+		transition: 120ms transform ease-in-out;
+		box-shadow: inset 1em 1em color-mix(in hsl, var(--swatch), black);
+	}
+	input[type='radio'] {
+		appearance: none;
+		margin: 0;
+	}
+	&:has(input[type='radio']:checked)::before {
+		transform: scale(1);
+	}
+}
+
+.spacing > * + * {
+	margin-top: 1em;
+}
+
+#wpch-health-tabs-swap {
+	display: contents;
+}
+
+.wpch-health-tabs {
+	margin-block-end: 2em;
+}
+
+.wpch-health-tablist {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4em;
+	margin-block-end: 0.8em;
+}
+
+.wpch-health-tab {
+	--tab-color: #666;
+	padding: 0.6em 1.1em;
+	font-size: 0.9em;
+	font-weight: 500;
+	color: var(--tab-color);
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 3px;
+	cursor: pointer;
+	line-height: 1;
+}
+
+.wpch-health-tab.is-active {
+	color: #fff;
+	background: var(--tab-color);
+	border-color: var(--tab-color);
+}
+
+.wpch-health-tab:disabled {
+	color: #8c8f94;
+	background: #f0f0f1;
+	border-color: #dcdcde;
+	cursor: not-allowed;
+	opacity: 0.7;
+}
+
+.wpch-health-count {
+	font-weight: 400;
+	opacity: 0.8;
+}

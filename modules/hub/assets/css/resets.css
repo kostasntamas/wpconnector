@@ -1,0 +1,120 @@
+*,
+::before,
+::after {
+	box-sizing: border-box;
+}
+
+html {
+	scroll-behavior: smooth;
+	scrollbar-gutter: stable;
+}
+@media screen and (prefers-reduced-motion: reduce) {
+	html {
+		scroll-behavior: auto;
+	}
+}
+
+*:not(dialog) {
+	margin: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	html {
+		interpolate-size: allow-keywords;
+	}
+}
+
+#adminmenumain,
+#adminmenuback,
+#adminmenuwrap,
+#wpadminbar,
+#wpfooter,
+#screen-meta-links,
+#wpbody-content .notice {
+	display: none !important;
+}
+
+.hidden {
+	display: none !important;
+}
+
+/* html.wp-toolbar {
+	padding-top: 0 !important;
+} */
+
+/* #wpcontent,
+#wpfooter {
+	padding: 0;
+	margin-left: 0 !important;
+} */
+
+#wpbody-content {
+	padding-bottom: 0 !important;
+	background-color: white;
+}
+
+body {
+	font-family: 'Poppins', sans-serif;
+	font-size: 15px;
+	line-height: 1.5;
+	-webkit-font-smoothing: antialiased;
+	height: 100dvb;
+}
+
+dialog {
+	border: none;
+	padding: 0;
+	margin: auto;
+	border-radius: 3px;
+	box-shadow:
+		rgba(67, 71, 85, 0.27) 0px 0px 0.25em,
+		rgba(90, 125, 188, 0.05) 0px 0.25em 1em;
+}
+
+dialog::backdrop {
+	background: rgba(0, 0, 0, 0.5);
+}
+
+dialog,
+::backdrop {
+	transition:
+		display 0.3s allow-discrete,
+		overlay 0.3s allow-discrete,
+		opacity 0.3s;
+	opacity: 0;
+}
+
+/* On Stage */
+[open],
+[open]::backdrop {
+	opacity: 1;
+}
+
+/* Off Stage */
+@starting-style {
+	[open],
+	[open]::backdrop {
+		opacity: 0;
+	}
+}
+
+svg {
+	display: block;
+	max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+	font: inherit;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	text-wrap: balance;
+}
