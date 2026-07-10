@@ -862,6 +862,9 @@ class WPCH_Admin_Page
 													<td colspan="10" style="text-align: left">
 														<input type="checkbox" <?php checked(! isset($open_states[$folder['id']]) || $open_states[$folder['id']]); ?> id="wpch-folder-toggle-<?php echo esc_attr($folder['id']); ?>">
 														<label for="wpch-folder-toggle-<?php echo esc_attr($folder['id']); ?>">
+															<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"><!-- Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE -->
+																<path fill="currentColor" d="M4 20q-.825 0-1.412-.587T2 18V6q0-.825.588-1.412T4 4h6l2 2h8q.825 0 1.413.588T22 8v10q0 .825-.587 1.413T20 20z" />
+															</svg>
 															<?php echo esc_html($folder['name']); ?>
 															<span class="wpch-folder-count" id="wpch-folder-count-<?php echo esc_attr($folder['id']); ?>">(<?php echo count($section['indexes']); ?>)</span>
 														</label>
