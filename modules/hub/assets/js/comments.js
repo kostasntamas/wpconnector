@@ -30,7 +30,7 @@ function wpchPositionCommentPopover(pop, index) {
 	}
 	var rect = btn.getBoundingClientRect();
 	pop.style.margin = '0';
-	pop.style.inset = 'auto';
+	// pop.style.inset = 'auto';
 	var width = pop.offsetWidth;
 	var height = pop.offsetHeight;
 	var left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
