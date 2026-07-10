@@ -216,16 +216,16 @@ $wpc_update_checker = \YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdat
 	WPC_PLUGIN_FILE,
 	'wpconnector'
 );
-$wpc_update_checker->setBranch('main');
+$wpc_update_checker->setBranch('master');
 
-$wpc_bb_key    = defined('WPC_BITBUCKET_CONSUMER_KEY') ? WPC_BITBUCKET_CONSUMER_KEY : 'PASTE-CONSUMER-KEY-HERE';
-$wpc_bb_secret = defined('WPC_BITBUCKET_CONSUMER_SECRET') ? WPC_BITBUCKET_CONSUMER_SECRET : 'PASTE-CONSUMER-SECRET-HERE';
-if (false === strpos($wpc_bb_key, 'PASTE-')) {
-	$wpc_update_checker->setAuthentication(array(
-		'consumer_key'    => $wpc_bb_key,
-		'consumer_secret' => $wpc_bb_secret,
-	));
-}
+// $wpc_bb_key    = defined('WPC_BITBUCKET_CONSUMER_KEY') ? WPC_BITBUCKET_CONSUMER_KEY : 'PASTE-CONSUMER-KEY-HERE';
+// $wpc_bb_secret = defined('WPC_BITBUCKET_CONSUMER_SECRET') ? WPC_BITBUCKET_CONSUMER_SECRET : 'PASTE-CONSUMER-SECRET-HERE';
+// if (false === strpos($wpc_bb_key, 'PASTE-')) {
+// 	$wpc_update_checker->setAuthentication(array(
+// 		'consumer_key'    => $wpc_bb_key,
+// 		'consumer_secret' => $wpc_bb_secret,
+// 	));
+// }
 
 // ---- Load the selected modules ----
 
