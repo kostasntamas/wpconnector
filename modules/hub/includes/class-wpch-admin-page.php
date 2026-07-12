@@ -166,7 +166,7 @@ class WPCH_Admin_Page
 				$this->folders->update_details(
 					sanitize_text_field($_POST['folder_id']),
 					isset($_POST['folder_name']) ? sanitize_text_field(trim($_POST['folder_name'])) : '',
-					isset($_POST['folder_color']) ? sanitize_hex_color($_POST['folder_color']) : ''
+					isset($_POST['folder_color']) ? $this->folders->sanitize_color($_POST['folder_color']) : null
 				);
 			} elseif ('import' === $action) {
 				$error = $this->import_json();
@@ -223,7 +223,7 @@ class WPCH_Admin_Page
 				$folders[] = [
 					'id'    => sanitize_text_field($folder['id']),
 					'name'  => sanitize_text_field($folder['name']),
-					'color' => isset($folder['color']) ? sanitize_hex_color($folder['color']) : '',
+					'color' => isset($folder['color']) ? $folder['color'] : '',
 				];
 			}
 		}
@@ -443,7 +443,7 @@ class WPCH_Admin_Page
 					<div style="padding:16px;">
 						<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
 							<strong><?php echo esc_html($row_label); ?> &mdash; Plugins</strong>
-							<button type="button" commandfor="<?php echo esc_attr($dialog_id); ?>" command="close" class="button">Close</button>
+							<button type="button" commandfor="<?php echo esc_attr($dialog_id); ?>" command="close" class="button close"><?php echo WPCH_Icons::get('close', 18); ?></button>
 						</div>
 						<?php
 						$plugins_active_no_update = [];
@@ -530,7 +530,7 @@ class WPCH_Admin_Page
 		$folder_id  = isset($endpoint['folder_id']) ? $endpoint['folder_id'] : '';
 		$comments   = isset($endpoint['comments']) && is_array($endpoint['comments']) ? $endpoint['comments'] : [];
 		$tag        = isset($endpoint['tag']) ? $endpoint['tag'] : '';
-		$comment_icon = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><!-- Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE --><path fill="currentColor" d="M6 14h12v-2H6zm0-3h12V9H6zm0-3h12V6H6zm16 14l-4-4H4q-.825 0-1.412-.587T2 16V4q0-.825.588-1.412T4 2h16q.825 0 1.413.588T22 4zM4 16h14.85L20 17.125V4H4zm0 0V4z"/></svg>';
+		$comment_icon = WPCH_Icons::get('comment', 20);
 		$row_label     = $domain ? $domain : $endpoint['url'];
 		$position      = null !== $position ? $position : ((int) $i + 1);
 		$domain_count  = $domain && isset($domain_counts[self::domain_key($domain)]) ? $domain_counts[self::domain_key($domain)] : 1;
@@ -579,16 +579,12 @@ class WPCH_Admin_Page
 			<td>
 				<div class="edits">
 					<button type="button" class="button edit-button" title="Edit row" command="show-modal" commandfor="wpch-edit-dialog-<?php echo esc_attr($i); ?>">
-						<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><!-- Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE -->
-							<path fill="currentColor" d="M3 21v-4.25L16.2 3.575q.3-.275.663-.425t.762-.15t.775.15t.65.45L20.425 5q.3.275.438.65T21 6.4q0 .4-.137.763t-.438.662L7.25 21zM17.6 7.8L19 6.4L17.6 5l-1.4 1.4z" />
-						</svg>
+						<?php echo WPCH_Icons::get('edit', 20); ?>
 					</button>
 					<button type="button" title="Add Comments" class="button comment-btn" onclick="wpchOpenComment(<?php echo (int) $i; ?>)"><?php echo $comment_icon; ?><?php if ($comments) : ?><span class="wpch-comment-count"><?php echo count($comments); ?></span><?php endif; ?></button>
 					<a title="Delete row" href="<?php echo esc_url(wp_nonce_url(add_query_arg('wpch_delete', $i), 'wpch_delete_' . $i)); ?>" class="wpch-delete-link" data-index="<?php echo esc_attr($i); ?>" data-folder-id="<?php echo esc_attr($folder_id); ?>" onclick="return confirm('Delete this endpoint?');" style="color:#b32d2e;">Delete</a>
 					<button title="Move row" type="button" class="move">
-						<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
-							<path d="M5 14.5v-1h14v1zm0-4v-1h14v1z" />
-						</svg>
+						<?php echo WPCH_Icons::get('move', 20); ?>
 					</button>
 				</div>
 
@@ -596,7 +592,7 @@ class WPCH_Admin_Page
 					<div style="padding:16px;">
 						<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
 							<strong>Edit <?php echo esc_html($row_label); ?></strong>
-							<button type="button" commandfor="wpch-edit-dialog-<?php echo esc_attr($i); ?>" command="close" class="button">Close</button>
+							<button type="button" commandfor="wpch-edit-dialog-<?php echo esc_attr($i); ?>" command="close" class="button close"><?php echo WPCH_Icons::get('close', 18); ?></button>
 						</div>
 						<div style="display:flex;flex-direction:column;gap:10px;">
 							<label style="text-align: start;display:flex;flex-direction:column;gap:4px;">
@@ -635,7 +631,7 @@ class WPCH_Admin_Page
 				<div class="wpch-comment-popover" popover id="wpch-comment-popover-<?php echo esc_attr($i); ?>">
 					<div class="wpch-comment-head">
 						<strong>Comments &mdash; <?php echo esc_html($row_label); ?></strong>
-						<button type="button" class="button" popovertarget="wpch-comment-popover-<?php echo esc_attr($i); ?>" popovertargetaction="hide">Close</button>
+						<button type="button" class="button close" popovertarget="wpch-comment-popover-<?php echo esc_attr($i); ?>" popovertargetaction="hide"><?php echo WPCH_Icons::get('close', 16); ?></button>
 					</div>
 					<div class="wpch-comment-thread" id="wpch-comment-thread-<?php echo esc_attr($i); ?>" data-rev="<?php echo esc_attr(self::comments_rev($comments)); ?>">
 						<?php $this->render_comments($i, $comments); ?>
@@ -726,7 +722,7 @@ class WPCH_Admin_Page
 								<?php endif; ?>
 							</tr>
 						</thead>
-						<tbody>
+						<tbody style="--style:<?php echo esc_attr($tiers[$label]); ?>;">
 							<?php foreach ($rows as $n => $row) : ?>
 								<tr>
 									<th scope="row"><?php echo (int) $n + 1; ?></th>
@@ -903,9 +899,7 @@ class WPCH_Admin_Page
 				</div>
 			</div>
 			<div class="wpch-main">
-				<a style="position: fixed;bottom: 0.5rem;right: 0.5rem;text-decoration: none; color: #3b02bb;" href="#add-a-site"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><!-- Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE -->
-						<path fill="currentColor" d="M11 16h2v-4.2l1.6 1.6L16 12l-4-4l-4 4l1.4 1.4l1.6-1.6zm1 6q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22" />
-					</svg></a>
+				<a style="position: fixed;bottom: 0.5rem;right: 0.5rem;text-decoration: none; color: #3b02bb;" href="#add-a-site"><?php echo WPCH_Icons::get('arrow-up-circle', 32); ?></a>
 				<?php if (isset($_GET['wpch_import_error'])) : ?>
 					<div class="wpch-notice">
 						<p>Import failed: <?php echo ('format' === $_GET['wpch_import_error']) ? 'the file was not valid JSON in the expected format.' : 'no file was uploaded.'; ?></p>
@@ -960,19 +954,13 @@ class WPCH_Admin_Page
 													<td colspan="10" style="text-align: left">
 														<input type="checkbox" <?php checked(! isset($open_states[$folder['id']]) || $open_states[$folder['id']]); ?> id="wpch-folder-toggle-<?php echo esc_attr($folder['id']); ?>">
 														<label for="wpch-folder-toggle-<?php echo esc_attr($folder['id']); ?>">
-															<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"><!-- Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE -->
-																<path fill="currentColor" d="M4 20q-.825 0-1.412-.587T2 18V6q0-.825.588-1.412T4 4h6l2 2h8q.825 0 1.413.588T22 8v10q0 .825-.587 1.413T20 20z" />
-															</svg>
+															<?php echo WPCH_Icons::get('folder', 22); ?>
 															<?php echo esc_html($folder['name']); ?>
 															<span class="wpch-folder-count" id="wpch-folder-count-<?php echo esc_attr($folder['id']); ?>">(<?php echo count($section['indexes']); ?>)</span>
 														</label>
-														<button type="button" class="button button-small edit-folder" command="show-modal" commandfor="wpch-edit-folder-dialog-<?php echo esc_attr($folder['id']); ?>"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"><!-- Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE -->
-																<path fill="currentColor" d="M3 21v-4.25L16.2 3.575q.3-.275.663-.425t.762-.15t.775.15t.65.45L20.425 5q.3.275.438.65T21 6.4q0 .4-.137.763t-.438.662L7.25 21zM17.6 7.8L19 6.4L17.6 5l-1.4 1.4z" />
-															</svg></button>
+														<button type="button" class="button button-small edit-folder" command="show-modal" commandfor="wpch-edit-folder-dialog-<?php echo esc_attr($folder['id']); ?>"><?php echo WPCH_Icons::get('edit', 22); ?></button>
 														<button type="button" class="drag" title="Move <?php echo esc_html($folder['name']); ?> folder">
-															<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24">
-																<path d="M8.5 7a1.5 1.5 0 1 0 0-3a1.5 1.5 0 0 0 0 3m0 6.5a1.5 1.5 0 1 0 0-3a1.5 1.5 0 0 0 0 3m1.5 5a1.5 1.5 0 1 1-3 0a1.5 1.5 0 0 1 3 0M15.5 7a1.5 1.5 0 1 0 0-3a1.5 1.5 0 0 0 0 3m1.5 5a1.5 1.5 0 1 1-3 0a1.5 1.5 0 0 1 3 0m-1.5 8a1.5 1.5 0 1 0 0-3a1.5 1.5 0 0 0 0 3" />
-															</svg>
+															<?php echo WPCH_Icons::get('drag', 22); ?>
 														</button>
 													</td>
 												</tr>
@@ -1001,7 +989,7 @@ class WPCH_Admin_Page
 											$dialogs[] = ob_get_clean();
 											?>
 										<?php else : ?>
-											<tbody class="non-folder" id="wpch-tbody-ungrouped" draggable="true" style="--style:#e7e7e7;">
+											<tbody class="non-folder" id="wpch-tbody-ungrouped" draggable="true" style="--style: #e7e7e7;">
 												<tr class="parent-row">
 													<td colspan="10" style="text-align: left">
 														<input type="checkbox" <?php checked(! isset($open_states['ungrouped']) || $open_states['ungrouped']); ?> id="wpch-folder-toggle-ungrouped">
@@ -1010,9 +998,7 @@ class WPCH_Admin_Page
 															<span class="wpch-folder-count" id="wpch-folder-count-ungrouped">(<?php echo count($section['indexes']); ?>)</span>
 														</label>
 														<button type="button" class="drag" title="Move Ungrouped">
-															<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24">
-																<path d="M8.5 7a1.5 1.5 0 1 0 0-3a1.5 1.5 0 0 0 0 3m0 6.5a1.5 1.5 0 1 0 0-3a1.5 1.5 0 0 0 0 3m1.5 5a1.5 1.5 0 1 1-3 0a1.5 1.5 0 0 1 3 0M15.5 7a1.5 1.5 0 1 0 0-3a1.5 1.5 0 0 0 0 3m1.5 5a1.5 1.5 0 1 1-3 0a1.5 1.5 0 0 1 3 0m-1.5 8a1.5 1.5 0 1 0 0-3a1.5 1.5 0 0 0 0 3" />
-															</svg>
+															<?php echo WPCH_Icons::get('drag', 22); ?>
 														</button>
 													</td>
 												</tr>

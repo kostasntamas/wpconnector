@@ -19,6 +19,7 @@ define('WPCH_PLUGIN_FILE', WPC_PLUGIN_FILE);
 define('WPCH_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WPCH_PLUGIN_URL', plugin_dir_url(__FILE__));
 
+require_once WPCH_PLUGIN_DIR . 'includes/class-wpch-icons.php';
 require_once WPCH_PLUGIN_DIR . 'includes/class-wpch-endpoints.php';
 require_once WPCH_PLUGIN_DIR . 'includes/class-wpch-folders.php';
 require_once WPCH_PLUGIN_DIR . 'includes/class-wpch-status-checker.php';

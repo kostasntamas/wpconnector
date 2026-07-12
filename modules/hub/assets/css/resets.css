@@ -4,6 +4,16 @@
 	box-sizing: border-box;
 }
 
+:root {
+	--clr-1: #cee9ff;
+	--clr-2: #ffd1a5;
+	--clr-3: #ffc8f2;
+	--clr-4: #f4e4ba;
+	--clr-5: #93e5ab;
+	--clr-6: #b8edff;
+	--clr-7: #d1cfff;
+}
+
 html {
 	scroll-behavior: smooth;
 	scrollbar-gutter: stable;

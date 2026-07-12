@@ -1,5 +1,6 @@
 /* buttons */
 button.button.refresh-button,
+button.button.close,
 button.button[command='close'],
 button.button.button-primary {
 	cursor: pointer;
@@ -20,8 +21,11 @@ button.button.refresh-button {
 button.button.button-primary {
 	background: black;
 }
-button.button[command='close'] {
+button.button.close {
 	background: red;
+	border-radius: 100vmax;
+	aspect-ratio: 1;
+	padding: 0.2em;
 }
 
 .row-button,
@@ -33,7 +37,7 @@ button.button[command='close'] {
 	background: none;
 	text-decoration: underline;
 	padding: 0.2em 0.5em;
-	color: contrast-color(var(--style));
+	/* color: contrast-color(var(--style)); */
 }
 
 .comment-btn {

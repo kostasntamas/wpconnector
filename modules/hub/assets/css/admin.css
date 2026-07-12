@@ -182,7 +182,9 @@ td {
 	font-weight: 400;
 	font-size: small;
 }
-
+tr th[scope='row'] {
+	border-right: 1px solid color-mix(in hsl, var(--border), white);
+}
 td {
 	&:last-child {
 		anchor-name: --edits;
@@ -427,26 +429,29 @@ td strong {
 }
 
 tbody {
-	--folder: var(--style);
-	--background: color-mix(in hsl, var(--style), rgb(255, 255, 255));
-	--background-even: color-mix(in hsl, var(--style), rgb(240, 240, 240));
-
-	--border: hsl(from var(--style) h s calc(l - 45));
-	border: 1px dashed var(--border);
 	anchor-scope: --folder;
+	--folder: var(--style);
+	--border: color-mix(in hsl, var(--style), black);
+	--background: color-mix(in hsl, var(--style), #ffffff);
+	--background-even: color-mix(in hsl, var(--style), transparent 80%);
+	border: 1px dashed var(--border);
 
 	&:has(input[type='checkbox']:not(:checked)) tr:not(.parent-row) {
 		display: none;
 	}
+
+	&:has(input[type='checkbox']:checked) .parent-row {
+		border-bottom: 0;
+	}
 }
 
 .parent-row {
-	background: var(--folder);
+	anchor-name: --folder;
 	color: contrast-color(var(--folder));
 	font-size: 1.125rem;
-	border-bottom: 1px dashed var(--border);
 	font-weight: bold;
-	anchor-name: --folder;
+	border-bottom: 1px dashed var(--border);
+	background: color-mix(in hsl, var(--folder), transparent 25%);
 
 	> td:first-child {
 		padding: 0px;
@@ -458,10 +463,10 @@ tbody {
 		}
 
 		input {
-			cursor: pointer;
 			anchor-name: --input;
-			position: absolute;
 			position-anchor: --folder;
+			cursor: pointer;
+			position: absolute;
 			top: anchor(center);
 			right: calc(anchor(left) + 5px);
 			translate: 0 -50%;
@@ -515,17 +520,23 @@ tbody {
 	}
 }
 
-tr:nth-child(even) {
-	background: color-mix(in hsl, var(--tab-color), rgb(240, 240, 240));
+tr:not(.parent-row):nth-child(odd) {
+	background: color-mix(in hsl, var(--style), transparent 97%);
 	&:hover {
-		background-color: color-mix(in hsl, var(--tab-color), rgb(224, 224, 224));
+		background-color: color-mix(in hsl, var(--style), transparent 87%);
+	}
+}
+tr:nth-child(even) {
+	background: color-mix(in hsl, var(--style), transparent 90%);
+	&:hover {
+		background-color: color-mix(in hsl, var(--style), transparent 80%);
 	}
 }
 
 tr.child-row:nth-child(even) {
 	background: var(--background-even);
 	&:hover {
-		background-color: color-mix(in hsl, var(--background-even), rgb(224, 224, 224));
+		background-color: color-mix(in hsl, var(--background-even), transparent 80%);
 	}
 }
 
@@ -534,10 +545,12 @@ tr.child-row {
 	font-size: 0.95rem;
 	background: var(--background);
 	&:hover {
-		background-color: color-mix(in hsl, var(--background), rgb(194, 194, 194));
+		background-color: color-mix(in hsl, var(--background), transparent 60%);
 	}
 }
-
+tr.child-row:last-child {
+	border-bottom: 1px dashed var(--border);
+}
 tr.child-row:last-child {
 	anchor-name: --last-folder-item;
 	anchor-scope: --last-folder-item;
