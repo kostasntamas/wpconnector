@@ -894,59 +894,101 @@ class WPCH_Admin_Page
 	?>
 		<div class="wpch-shell">
 			<div class="wpch-sidebar">
-				<div class="top" style="display: flex; gap: 2em; flex-direction: column;">
-					<h2>WP Connector Hub</h2>
-					<a href="<?php echo esc_url(admin_url()); ?>">&larr; Back to WordPress Dashboard</a>
+				<div class="wpch-sidebar-top">
+					<?php /* <div class="wpch-brand">
+						<?php echo WPCH_Icons::get('globe', 24); ?>
+					</div> */ ?>
+					<button type="button" class="wpch-side-btn wpch-side-primary" command="show-modal" commandfor="wpch-add-dialog">
+						<?php echo WPCH_Icons::get('plus', 18); ?> Add Site
+					</button>
+					<div class="wpch-side-group">
+						<span class="wpch-side-label">Backup</span>
+						<a class="wpch-side-btn" href="<?php echo esc_url(wp_nonce_url(add_query_arg('wpch_export', '1'), 'wpch_export')); ?>">
+							<?php echo WPCH_Icons::get('download', 18); ?> Export JSON
+						</a>
+						<button type="button" class="wpch-side-btn" command="show-modal" commandfor="wpch-import-dialog">
+							<?php echo WPCH_Icons::get('upload', 18); ?> Import JSON
+						</button>
+					</div>
 				</div>
-				<div class="options" style="display: flex; flex-direction: column; gap: 2em;">
-					<div class="wpch-io">
-						<strong>Backup</strong>
-						<a href="<?php echo esc_url(wp_nonce_url(add_query_arg('wpch_export', '1'), 'wpch_export')); ?>" class="button">Export JSON</a>
-						<form method="post" enctype="multipart/form-data">
+				<a class="wpch-side-back" href="<?php echo esc_url(admin_url()); ?>">&larr; WordPress Dashboard</a>
+
+				<dialog id="wpch-add-dialog" style="min-width:360px;max-width:90vw;">
+					<div style="padding:16px;">
+						<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+							<strong>Add a Site</strong>
+							<button type="button" commandfor="wpch-add-dialog" command="close" class="button close"><?php echo WPCH_Icons::get('close', 18); ?></button>
+						</div>
+						<form method="post" id="wpch-add-form" style="display:flex;flex-direction:column;gap:10px;">
 							<?php wp_nonce_field('wpch_manage'); ?>
-							<input type="hidden" name="wpch_action" value="import">
-							<input type="file" name="import_file" accept="application/json">
-							<button type="submit" class="button" onclick="return confirm('This will replace all current sites and folders with the imported file. Continue?');">Import JSON</button>
+							<input type="hidden" name="wpch_action" value="add">
+							<label style="text-align: start;display:flex;flex-direction:column;gap:4px;">
+								Site URL
+								<input type="text" name="new_url" placeholder="https://example.com">
+							</label>
+							<label style="text-align: start;display:flex;flex-direction:column;gap:4px;">
+								Secret key
+								<input type="text" data-type="secret-key" name="new_key" autocomplete="off" placeholder="Secret key">
+							</label>
+							<label style="text-align: start;display:flex;flex-direction:column;gap:4px;" title="Where this site's Login link points. Full URL or a path like /wp-admin/ — leave empty for the default login URL.">
+								Login URL <small style="font-weight:400;color:#666;">(empty = default)</small>
+								<input type="text" name="new_login_url" placeholder="Login URL (optional)">
+							</label>
+							<div class="spacing" style="display:flex;flex-direction:column;align-items:flex-start;">
+								<?php $this->render_folder_picker_fields('add', $folders); ?>
+							</div>
+							<button type="submit" class="button button-primary" style="margin-top:1em;">Add Site</button>
 						</form>
 					</div>
-					<?php
-					$current_user = wp_get_current_user();
-					?>
-					<div class="user" style="margin-top: 2em; display: flex; flex-direction: column; gap: 0.6em;">
-						<strong>User Name</strong>
-						<div style="display: flex; gap: 1ch; justify-content: space-between; align-items: flex-end;">
-							<div id="user-<?php echo esc_attr($current_user->ID); ?>" class="profile" style="border-radius: 100vmax; aspect-ratio: 1 / 1; padding: .2em .6em; background: lightblue; display: flex; width: fit-content;align-items: center; justify-content: center; color: black;">
-								<?php echo htmlspecialchars(self::initials($current_user->user_login)); ?>
-							</div>
-							<?php echo '<a href="' . wp_logout_url(home_url()) . '">Logout</a>'; ?>
+				</dialog>
+
+				<dialog id="wpch-import-dialog" style="min-width:340px;max-width:90vw;">
+					<div style="padding:16px;">
+						<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+							<strong>Import JSON</strong>
+							<button type="button" commandfor="wpch-import-dialog" command="close" class="button close"><?php echo WPCH_Icons::get('close', 18); ?></button>
 						</div>
+						<form method="post" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:12px;">
+							<?php wp_nonce_field('wpch_manage'); ?>
+							<input type="hidden" name="wpch_action" value="import">
+							<input type="file" name="import_file" accept="application/json" style="max-width:100%;">
+							<small style="color:#666;text-align:start;">Importing replaces all current sites and folders with the file's contents.</small>
+							<button type="submit" class="button button-primary" onclick="return confirm('This will replace all current sites and folders with the imported file. Continue?');">Import JSON</button>
+						</form>
 					</div>
-				</div>
+				</dialog>
 			</div>
 			<div class="wpch-main">
-				<a style="position: fixed;bottom: 0.5rem;right: 0.5rem;text-decoration: none; color: #3b02bb;" href="#add-a-site"><?php echo WPCH_Icons::get('arrow-up-circle', 32); ?></a>
+				<?php
+				$current_user = wp_get_current_user();
+				$display_name = $current_user->display_name ? $current_user->display_name : $current_user->user_login;
+				?>
+				<header class="wpch-topbar" id="wpch-top">
+					<span style="margin-right: auto;">WP Connector <b>Hub</b></span>
+					<button type="button" id="wpch-search-btn" class="wpch-search-bar" title="Filter the table by domain">
+						<?php echo WPCH_Icons::get('search', 18); ?>
+						<kbd>Ctrl+K</kbd>
+					</button>
+					<div class="wpch-topbar-user">
+						<div class="wpch-user-chip" id="user-<?php echo esc_attr($current_user->ID); ?>" title="<?php echo esc_attr($current_user->user_login); ?>">
+							<span class="wpch-user-avatar"><?php echo esc_html(self::initials($display_name)); ?></span>
+							<span class="wpch-user-name" hidden><?php echo esc_html($display_name); ?></span>
+						</div>
+						<a class="wpch-logout" title="logout" href="<?php echo esc_url(wp_logout_url(home_url())); ?>">
+							<?php echo WPCH_Icons::get('logout', 20); ?></a>
+					</div>
+				</header>
+				<a style="position: fixed;bottom: 1.4rem;right: 1.4rem;text-decoration: none; color: #3b02bb;" href="#wpch-top" title="Back to top"><?php echo WPCH_Icons::get('arrow-up-circle', 32); ?></a>
 				<?php if (isset($_GET['wpch_import_error'])) : ?>
 					<div class="wpch-notice">
 						<p>Import failed: <?php echo ('format' === $_GET['wpch_import_error']) ? 'the file was not valid JSON in the expected format.' : 'no file was uploaded.'; ?></p>
 					</div>
 				<?php endif; ?>
 				<div class="wrapper">
-					<h2 id="add-a-site">Add a Site</h2>
-					<form method="post" id="wpch-add-form" style="display: flex; align-items: center; gap: 1em; justify-content: flex-start;">
-						<?php wp_nonce_field('wpch_manage'); ?>
-						<input type="hidden" name="wpch_action" value="add">
-						<input type="text" name="new_url" placeholder="https://example.com">
-						<input type="text" data-type="secret-key" name="new_key" autocomplete="off" placeholder="Secret key">
-						<input type="text" name="new_login_url" placeholder="Login URL (optional)" title="Where this site's Login link points. Full URL or a path like /wp-admin/ — leave empty for the default login URL.">
-						<?php $this->render_folder_picker_fields('add', $folders); ?>
-						<button type="submit" class="button button-primary">Add Site</button>
-					</form>
-
 					<h2 style="display:flex;align-items:center;gap:1em;">
 						Sites
 						<span class="wpch-total-count"><?php echo count($endpoints); ?> total</span>
 						<button type="button" id="wpch-refresh-btn" class="button refresh-button button-small">Refresh</button>
-						<button type="button" id="wpch-search-btn" class="button button-small wpch-search-btn" title="Filter the table by domain">Search <kbd>Ctrl+K</kbd></button>
 					</h2>
 
 					<?php
@@ -977,7 +1019,7 @@ class WPCH_Admin_Page
 							// row swaps (add/refresh/delete).
 							?>
 							<div class="wpch-filters">
-								<label>
+								<label for="wpch-filter-tag">
 									Tag
 									<select id="wpch-filter-tag">
 										<option value="">All</option>
@@ -987,13 +1029,13 @@ class WPCH_Admin_Page
 										<?php endforeach; ?>
 									</select>
 								</label>
-								<label>
+								<label for="wpch-filter-wp">
 									WP version
 									<select id="wpch-filter-wp">
 										<option value="">All</option>
 									</select>
 								</label>
-								<label>
+								<label for="wpch-filter-php">
 									PHP version
 									<select id="wpch-filter-php">
 										<option value="">All</option>
@@ -1027,7 +1069,7 @@ class WPCH_Admin_Page
 														<label for="wpch-folder-toggle-<?php echo esc_attr($folder['id']); ?>">
 															<?php echo WPCH_Icons::get('folder', 22); ?>
 															<?php echo esc_html($folder['name']); ?>
-															<span class="wpch-folder-count" id="wpch-folder-count-<?php echo esc_attr($folder['id']); ?>">(<?php echo count($section['indexes']); ?>)</span>
+															<small class="wpch-folder-count" id="wpch-folder-count-<?php echo esc_attr($folder['id']); ?>">(<?php echo count($section['indexes']); ?>)</small>
 														</label>
 														<button type="button" class="button button-small edit-folder" command="show-modal" commandfor="wpch-edit-folder-dialog-<?php echo esc_attr($folder['id']); ?>"><?php echo WPCH_Icons::get('edit', 22); ?></button>
 														<button type="button" class="drag" title="Move <?php echo esc_html($folder['name']); ?> folder">
@@ -1066,7 +1108,7 @@ class WPCH_Admin_Page
 														<input type="checkbox" <?php checked(! isset($open_states['ungrouped']) || $open_states['ungrouped']); ?> id="wpch-folder-toggle-ungrouped">
 														<label for="wpch-folder-toggle-ungrouped">
 															Ungrouped
-															<span class="wpch-folder-count" id="wpch-folder-count-ungrouped">(<?php echo count($section['indexes']); ?>)</span>
+															<small class="wpch-folder-count" id="wpch-folder-count-ungrouped">(<?php echo count($section['indexes']); ?>)</small>
 														</label>
 														<button type="button" class="drag" title="Move Ungrouped">
 															<?php echo WPCH_Icons::get('drag', 22); ?>

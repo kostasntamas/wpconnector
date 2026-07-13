@@ -13,15 +13,15 @@
 }
 
 .wpch-sidebar {
-	width: 220px;
+	width: auto;
 	flex-shrink: 0;
 	background: #1d2327;
 	color: #fff;
-	padding: 20px;
+	padding: 16px 12px;
 	display: flex;
 	flex-direction: column;
 	justify-content: space-between;
-	/* box-sizing: border-box; */
+	gap: 1.5em;
 	height: 100vh;
 	position: sticky;
 	top: 0;
@@ -35,23 +35,191 @@
 	color: #fff;
 }
 
-.wpch-io {
-	margin-top: 2em;
+.wpch-sidebar-top {
 	display: flex;
 	flex-direction: column;
-	gap: 0.6em;
+	justify-content: space-between;
+	height: 100%;
+	gap: 1.6em;
 }
 
-.wpch-io form {
+.wpch-brand {
+	display: flex;
+	align-items: center;
+	gap: 0.7ch;
+	font-size: 0.9rem;
+	font-weight: 400;
+	line-height: 1.25;
+	text-align: left;
+}
+
+.wpch-brand svg {
+	flex: none;
+	color: #72aee6;
+}
+
+.wpch-brand b {
+	font-weight: 700;
+}
+
+.wpch-side-group {
 	display: flex;
 	flex-direction: column;
-	gap: 0.4em;
+	gap: 0.5em;
 }
 
-.wpch-io input[type='file'] {
-	max-width: 100%;
-	min-width: 0;
+.wpch-side-label {
+	font-size: 0.68rem;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.09em;
+	opacity: 0.55;
+}
+
+.wpch-side-btn,
+.wpch-sidebar a.wpch-side-btn {
+	display: flex;
+	align-items: center;
+	gap: 0.8ch;
+	width: 100%;
+	padding: 0.6em 0.7em;
+	font-size: 0.82rem;
+	color: #e2e4e7;
+	text-decoration: none;
+	background: #2c3338;
+	border: 1px solid #3c434a;
+	border-radius: 3px;
+	cursor: pointer;
+	line-height: 1;
+	justify-content: center;
+}
+
+.wpch-side-btn:hover,
+.wpch-sidebar a.wpch-side-btn:hover {
+	background: #3c434a;
 	color: #fff;
+}
+
+.wpch-side-btn svg {
+	flex: none;
+}
+
+.wpch-side-primary,
+.wpch-side-btn.wpch-side-primary {
+	background: #2271b1;
+	border-color: #2271b1;
+	color: #fff;
+	font-weight: 500;
+}
+
+.wpch-side-primary:hover,
+.wpch-side-btn.wpch-side-primary:hover {
+	background: #135e96;
+	border-color: #135e96;
+}
+
+.wpch-side-back {
+	font-size: 0.78rem;
+	text-align: left;
+}
+
+/* Sticky top bar: search bar (opens the Ctrl+K palette) + user chip + logout. */
+.wpch-topbar {
+	position: sticky;
+	top: 0;
+	z-index: 10;
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 1.5em;
+	min-height: var(--wpch-topbar-h);
+	padding: 0 1.4rem;
+	background: #fff;
+	border-bottom: 1px solid #dcdcde;
+}
+
+.wpch-search-bar {
+	display: flex;
+	align-items: center;
+	gap: 1ch;
+	/* min-width: min(360px, 40vw); */
+	padding: 0.5em 0.9em;
+	font-size: 0.85rem;
+	color: #646970;
+	text-align: left;
+	background: #f6f7f7;
+	border: 1px solid #c3c4c7;
+	border-radius: 100vmax;
+	cursor: pointer;
+	line-height: 1;
+}
+
+.wpch-search-bar:hover {
+	border-color: #8c8f94;
+	background: #fff;
+}
+
+.wpch-search-bar svg {
+	flex: none;
+}
+
+.wpch-search-bar span {
+	flex: 1;
+}
+
+.wpch-topbar-user {
+	display: flex;
+	align-items: center;
+	gap: 1.4em;
+}
+
+.wpch-user-chip {
+	display: flex;
+	align-items: center;
+	gap: 0.8ch;
+}
+
+.wpch-user-avatar {
+	display: flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	font-size: 0.72rem;
+	font-weight: 600;
+	color: #000;
+	background: lightblue;
+	border-radius: 50%;
+}
+
+.wpch-user-name {
+	font-size: 0.85rem;
+	font-weight: 500;
+	color: #1d2327;
+	white-space: nowrap;
+}
+
+.wpch-logout {
+	display: flex;
+	align-items: center;
+	gap: 0.5ch;
+	font-size: 0.85rem;
+	color: black;
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+.wpch-logout:hover {
+	text-decoration: underline;
+}
+
+/* Full-width inputs inside the sidebar's Add Site dialog (buttons.css caps
+   text inputs at 200px otherwise). */
+#wpch-add-dialog input[type='text'],
+#wpch-add-dialog select {
+	width: 100%;
+	max-width: 100%;
 }
 
 .wpch-notice {
@@ -73,7 +241,7 @@
 }
 
 .wrapper {
-	padding-block: 3rem;
+	padding-block: 1.5rem 3rem;
 	inline-size: min(100% - 4.2rem, 1600px);
 	margin-inline: auto;
 	min-block-size: 100dvb;
@@ -83,9 +251,9 @@
 }
 
 .wpch-folder-count {
-	font-weight: 400;
-	opacity: 0.7;
-	font-size: 0.9em;
+	font-weight: 300;
+	opacity: 0.5;
+	font-size: 0.75em;
 }
 
 .wpch-total-count {
@@ -166,7 +334,7 @@ thead th:last-child {
 thead,
 thead th {
 	position: sticky;
-	top: 3rem;
+	top: calc(var(--wpch-topbar-h) + 10px);
 	background: var(--tab-color, #00325c);
 	text-transform: capitalize;
 	font-size: 1rem;
@@ -512,7 +680,7 @@ tbody {
 			inline-size: 98%;
 			display: flex;
 			gap: 1ch;
-			align-items: flex-end;
+			align-items: center;
 
 			svg path {
 				fill: color-mix(in hsl, var(--style), black);
@@ -566,7 +734,7 @@ tr.child-row:last-child {
 		bottom: anchor(center --last-folder-item);
 		border-left: 1px dashed color-mix(in hsl, var(--folder), black);
 		border-bottom: 1px dashed color-mix(in hsl, var(--folder), black);
-		border-radius: 0 0 0 4px;
+		border-radius: 0 0 0 3px;
 	}
 }
 
@@ -667,7 +835,7 @@ label.wpch-swatch {
 	display: flex;
 	align-items: center;
 	gap: 1.5em;
-	margin: 0.8em 0;
+	margin: 2.5rem 0 1em 0;
 }
 .wpch-filters label {
 	display: flex;
@@ -679,20 +847,7 @@ label.wpch-swatch {
 	color: #50575e;
 }
 
-.wpch-search-btn {
-	position: fixed;
-	top: 0.7rem;
-	left: auto;
-	right: 0.7rem;
-	cursor: pointer;
-	border: 1px solid #c3c4c7;
-	background: #fff;
-	color: #50575e;
-	padding: 0.5em 0.7em;
-	border-radius: 3px;
-	line-height: 1;
-}
-.wpch-search-btn kbd,
+.wpch-search-bar kbd,
 .wpch-search kbd {
 	font-family: inherit;
 	font-size: 0.85em;
@@ -700,7 +855,6 @@ label.wpch-swatch {
 	border-radius: 3px;
 	padding: 0.1em 0.4em;
 	background: #f6f7f7;
-	margin-left: 20px;
 }
 
 dialog.wpch-search {

@@ -176,6 +176,11 @@ document.addEventListener('submit', function (e) {
 			}
 			wpchInsertRow(res.data);
 			form.reset();
+			// The form lives in the sidebar's Add Site dialog — close it on success.
+			var dialog = form.closest('dialog');
+			if (dialog && dialog.open) {
+				dialog.close();
+			}
 		})
 		.catch(function () {
 			alert('Could not add site. Please try again.');

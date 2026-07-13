@@ -3,7 +3,7 @@
 /**
  * Plugin Name: WP Connector
  * Description: WP Connector Endpoint and Hub combined. Choose per site whether it acts as a monitored Endpoint, as the monitoring Hub, or as both (for testing).
- * Version: 2.2.8.3
+ * Version: 2.2.8.4
  * Requires at least: 4.7
  * Requires PHP: 7.0
  */
@@ -32,7 +32,7 @@ if (version_compare(PHP_VERSION, '7.0', '<')) {
 	return;
 }
 
-define('WPC_VERSION', '2.2.8.3');
+define('WPC_VERSION', '2.2.8.4');
 define('WPC_PLUGIN_FILE', __FILE__);
 define('WPC_PLUGIN_DIR', plugin_dir_path(__FILE__));
 
