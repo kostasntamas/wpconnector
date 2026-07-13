@@ -119,7 +119,8 @@ input[data-type='secret-key'] {
 
 /* Links */
 
-a[target='_blank'].login {
+a[target='_blank'] {
+	color: color-mix(in hsl, var(--style), black);
 	text-decoration: none;
 	display: flex;
 	align-items: center;

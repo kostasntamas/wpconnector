@@ -103,6 +103,7 @@ class WPCH_Endpoints
 			'careful'   => ['label' => 'Be Careful', 'color' => '#c98a00'],
 			'attention' => ['label' => 'Needs Attention', 'color' => '#b32d2e'],
 			'check_comment' => ['label' => 'Check Comment', 'color' => '#f0ff22'],
+			'woocommerce' => ['label' => 'Woocommerce', 'color' => '#873eff'],
 		];
 	}
 

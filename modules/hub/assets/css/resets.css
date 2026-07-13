@@ -33,7 +33,7 @@ html {
 		interpolate-size: allow-keywords;
 	}
 }
-
+.components-modal__screen-overlay.commands-command-menu__overlay,
 #adminmenumain,
 #adminmenuback,
 #adminmenuwrap,
