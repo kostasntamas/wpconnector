@@ -103,10 +103,16 @@ function wpchRenumberRows() {
 		}
 	});
 
-	// Row swaps (add/edit/refresh) produce fresh markup without the filter
-	// class — re-hide whatever doesn't match the active Ctrl+K query.
-	if (wpchSearchQuery) {
-		wpchApplyDomainFilter(wpchSearchQuery);
+	// Row swaps (add/edit/refresh) can change the versions present in the
+	// table and produce fresh markup without the filter class — rebuild the
+	// version select options, then re-hide whatever doesn't match the active
+	// filters (Ctrl+K query + Tag/WP/PHP selects). Capture activity before the
+	// rebuild: it may clear a version filter whose value just disappeared, and
+	// the previously hidden rows still need one pass to unhide.
+	var wasActive = wpchFilterActive();
+	wpchRebuildVersionFilterOptions();
+	if (wasActive || wpchFilterActive()) {
+		wpchApplyFilters();
 	}
 }
 
@@ -289,33 +295,59 @@ document.addEventListener('click', function (e) {
 	});
 });
 
-// ---- Ctrl+K domain filter ----
-// A small non-modal palette (#wpch-search) that live-filters the main table
-// by the rows' data-domain attribute only — keys, tags and comments are never
-// matched. Enter closes the palette and keeps the filter; Esc clears it.
+// ---- Main-table filters ----
+// Two layers share the wpch-search-miss hiding mechanism: the Ctrl+K palette
+// (#wpch-search), which live-filters by the rows' data-domain attribute only,
+// and the Tag / WP version / PHP version selects (.wpch-filters), which match
+// the rows' data-tag/data-wp/data-php attributes. A row must pass all active
+// criteria to stay visible. Enter closes the palette and keeps the query;
+// Esc clears it (the selects are untouched either way).
 
 var wpchSearchQuery = '';
+var wpchFilters = { tag: '', wp: '', php: '' };
 
 // Folders the filter forced open so their matching rows are visible, mapped
-// to the open state to restore once the query clears (checkbox id => original
+// to the open state to restore once the filters clear (checkbox id => original
 // checked). The checkboxes are flipped programmatically, which fires no
 // change event — so folders.js never persists the temporary expansion.
 var wpchSearchOpenedFolders = {};
 
-function wpchApplyDomainFilter(query) {
-	wpchSearchQuery = (query || '').trim().toLowerCase();
+function wpchFilterActive() {
+	return '' !== wpchSearchQuery || '' !== wpchFilters.tag || '' !== wpchFilters.wp || '' !== wpchFilters.php;
+}
 
+function wpchRowMatchesFilters(row) {
+	if ('' !== wpchSearchQuery && (row.getAttribute('data-domain') || '').toLowerCase().indexOf(wpchSearchQuery) === -1) {
+		return false;
+	}
+	if ('' !== wpchFilters.tag) {
+		var tag = row.getAttribute('data-tag') || '';
+		if ('__none__' === wpchFilters.tag ? '' !== tag : tag !== wpchFilters.tag) {
+			return false;
+		}
+	}
+	// Offline rows carry empty data-wp/data-php, so any version filter hides them.
+	if ('' !== wpchFilters.wp && (row.getAttribute('data-wp') || '') !== wpchFilters.wp) {
+		return false;
+	}
+	if ('' !== wpchFilters.php && (row.getAttribute('data-php') || '') !== wpchFilters.php) {
+		return false;
+	}
+	return true;
+}
+
+function wpchApplyFilters() {
 	var table = document.getElementById('wpch-status-table');
 	if (!table) {
 		return;
 	}
 
+	var active = wpchFilterActive();
 	var total = 0;
 	var shown = 0;
 	table.querySelectorAll(':scope > tbody > tr:not(.parent-row)').forEach(function (row) {
 		total++;
-		var domain = (row.getAttribute('data-domain') || '').toLowerCase();
-		var match = '' === wpchSearchQuery || domain.indexOf(wpchSearchQuery) !== -1;
+		var match = !active || wpchRowMatchesFilters(row);
 		row.classList.toggle('wpch-search-miss', !match);
 		if (match) {
 			shown++;
@@ -327,10 +359,10 @@ function wpchApplyDomainFilter(query) {
 	// that hides a closed folder's rows would keep the hit invisible.
 	table.querySelectorAll(':scope > tbody').forEach(function (tbody) {
 		var any = tbody.querySelector('tr:not(.parent-row):not(.wpch-search-miss)');
-		tbody.classList.toggle('wpch-search-miss', '' !== wpchSearchQuery && !any);
+		tbody.classList.toggle('wpch-search-miss', active && !any);
 
 		var toggle = tbody.querySelector('.parent-row input[type="checkbox"]');
-		if ('' !== wpchSearchQuery && any && toggle && !toggle.checked) {
+		if (active && any && toggle && !toggle.checked) {
 			if (!(toggle.id in wpchSearchOpenedFolders)) {
 				wpchSearchOpenedFolders[toggle.id] = false;
 			}
@@ -338,8 +370,8 @@ function wpchApplyDomainFilter(query) {
 		}
 	});
 
-	// Query cleared: fold the force-opened groups back to how the user had them.
-	if ('' === wpchSearchQuery) {
+	// All filters cleared: fold the force-opened groups back to how the user had them.
+	if (!active) {
 		Object.keys(wpchSearchOpenedFolders).forEach(function (id) {
 			var toggle = document.getElementById(id);
 			if (toggle) {
@@ -353,7 +385,102 @@ function wpchApplyDomainFilter(query) {
 	if (count) {
 		count.textContent = '' === wpchSearchQuery ? '' : shown + ' / ' + total;
 	}
+	var filterCount = document.getElementById('wpch-filter-count');
+	if (filterCount) {
+		var selectsActive = '' !== wpchFilters.tag || '' !== wpchFilters.wp || '' !== wpchFilters.php;
+		filterCount.textContent = selectsActive ? shown + ' / ' + total : '';
+	}
 }
+
+function wpchApplyDomainFilter(query) {
+	wpchSearchQuery = (query || '').trim().toLowerCase();
+	wpchApplyFilters();
+}
+
+// Newest-first order for the WP/PHP version select options.
+function wpchVersionCompareDesc(a, b) {
+	var pa = a.split('.');
+	var pb = b.split('.');
+	var len = Math.max(pa.length, pb.length);
+	for (var i = 0; i < len; i++) {
+		var na = parseInt(pa[i], 10) || 0;
+		var nb = parseInt(pb[i], 10) || 0;
+		if (na !== nb) {
+			return nb - na;
+		}
+	}
+	return 0;
+}
+
+// Rebuilds the WP/PHP version selects from the versions currently present in
+// the table rows, keeping the current selection when it still exists. Called
+// on load and after every row swap (a refresh can change a site's versions).
+function wpchRebuildVersionFilterOptions() {
+	var table = document.getElementById('wpch-status-table');
+	if (!table) {
+		return;
+	}
+
+	[
+		['wpch-filter-wp', 'data-wp', 'wp'],
+		['wpch-filter-php', 'data-php', 'php'],
+	].forEach(function (spec) {
+		var select = document.getElementById(spec[0]);
+		if (!select) {
+			return;
+		}
+
+		var seen = {};
+		table.querySelectorAll(':scope > tbody > tr:not(.parent-row)').forEach(function (row) {
+			var value = row.getAttribute(spec[1]) || '';
+			if (value) {
+				seen[value] = true;
+			}
+		});
+		var versions = Object.keys(seen).sort(wpchVersionCompareDesc);
+
+		var current = select.value;
+		while (select.options.length > 1) {
+			select.remove(1);
+		}
+		versions.forEach(function (version) {
+			var option = document.createElement('option');
+			option.value = version;
+			option.textContent = version;
+			select.appendChild(option);
+		});
+
+		if (versions.indexOf(current) !== -1) {
+			select.value = current;
+		} else {
+			// The selected version disappeared from the table — drop the filter.
+			select.value = '';
+			wpchFilters[spec[2]] = '';
+		}
+	});
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+	var selects = [
+		['wpch-filter-tag', 'tag'],
+		['wpch-filter-wp', 'wp'],
+		['wpch-filter-php', 'php'],
+	];
+	if (!document.getElementById(selects[0][0])) {
+		return;
+	}
+
+	wpchRebuildVersionFilterOptions();
+	selects.forEach(function (spec) {
+		var select = document.getElementById(spec[0]);
+		if (select) {
+			select.addEventListener('change', function () {
+				wpchFilters[spec[1]] = this.value;
+				wpchApplyFilters();
+			});
+		}
+	});
+});
 
 function wpchOpenSearch() {
 	var dlg = document.getElementById('wpch-search');

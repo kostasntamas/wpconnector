@@ -662,6 +662,23 @@ label.wpch-swatch {
 	display: none !important;
 }
 
+/* Tag / WP version / PHP version select filters above the main table. */
+.wpch-filters {
+	display: flex;
+	align-items: center;
+	gap: 1.5em;
+	margin: 0.8em 0;
+}
+.wpch-filters label {
+	display: flex;
+	align-items: center;
+	gap: 0.8ch;
+	white-space: nowrap;
+	font-size: 0.85em;
+	font-weight: 500;
+	color: #50575e;
+}
+
 .wpch-search-btn {
 	position: fixed;
 	top: 0.7rem;

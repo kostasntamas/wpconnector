@@ -562,7 +562,7 @@ class WPCH_Admin_Page
 			}
 		}
 	?>
-		<tr id="wpch-row-<?php echo esc_attr($i); ?>" data-id="<?php echo esc_attr(isset($endpoint['id']) ? $endpoint['id'] : ''); ?>" data-domain="<?php echo esc_attr($row_label); ?>" <?php /* echo $in_folder ? ' class="child-row"' : ''; */ ?> class="child-row" draggable="true">
+		<tr id="wpch-row-<?php echo esc_attr($i); ?>" data-id="<?php echo esc_attr(isset($endpoint['id']) ? $endpoint['id'] : ''); ?>" data-domain="<?php echo esc_attr($row_label); ?>" data-tag="<?php echo esc_attr($tag); ?>" data-wp="<?php echo esc_attr($is_error ? '' : $status['wp_version']); ?>" data-php="<?php echo esc_attr($is_error ? '' : $status['php_version']); ?>" <?php /* echo $in_folder ? ' class="child-row"' : ''; */ ?> class="child-row" draggable="true">
 			<th scope="row"><?php echo (int) $position; ?></th>
 			<td><a href="<?php echo esc_url(WPCH_Endpoints::login_url_for($endpoint)); ?>" target="_blank" style="display: flex;align-items: center; gap: 1ch;">Login</a></td>
 			<td style="text-align: left">
@@ -968,6 +968,39 @@ class WPCH_Admin_Page
 					<div class="wpch-health-tabs" id="wpch-health-tabs">
 						<?php $this->render_health_tabs($endpoints, $statuses); ?>
 						<div class="wpch-health-panel" data-tab="all">
+							<?php
+							// Select filters for the main table, combined with the
+							// Ctrl+K domain query (admin.js, same wpch-search-miss
+							// mechanism). The tag options are the fixed presets; the
+							// WP/PHP version options are rebuilt by JS from the rows'
+							// data-wp/data-php attributes so they stay in sync after
+							// row swaps (add/refresh/delete).
+							?>
+							<div class="wpch-filters">
+								<label>
+									Tag
+									<select id="wpch-filter-tag">
+										<option value="">All</option>
+										<option value="__none__">No tag</option>
+										<?php foreach (WPCH_Endpoints::tag_presets() as $slug => $preset) : ?>
+											<option value="<?php echo esc_attr($slug); ?>"><?php echo esc_html($preset['label']); ?></option>
+										<?php endforeach; ?>
+									</select>
+								</label>
+								<label>
+									WP version
+									<select id="wpch-filter-wp">
+										<option value="">All</option>
+									</select>
+								</label>
+								<label>
+									PHP version
+									<select id="wpch-filter-php">
+										<option value="">All</option>
+									</select>
+								</label>
+								<span class="wpch-search-count" id="wpch-filter-count"></span>
+							</div>
 							<div class="site-status-form spacing">
 								<table class="wpch-status-table" id="wpch-status-table">
 									<thead>
