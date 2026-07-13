@@ -117,9 +117,11 @@ class WPCH_Ajax
 		$folder_count_before = count($this->folders->get_all());
 		$existing_endpoints  = $this->endpoints->get_all();
 
+		$url      = esc_url_raw(WPCH_Endpoints::normalize_url($_POST['new_url']));
 		$endpoint = [
-			'url'       => esc_url_raw(WPCH_Endpoints::normalize_url($_POST['new_url'])),
+			'url'       => $url,
 			'key'       => isset($_POST['new_key']) ? sanitize_text_field(trim($_POST['new_key'])) : '',
+			'login_url' => isset($_POST['new_login_url']) && is_string($_POST['new_login_url']) ? WPCH_Endpoints::normalize_login_url(wp_unslash($_POST['new_login_url']), $url) : '',
 			'folder_id' => $this->folders->resolve_choice($_POST),
 			'comments'  => [],
 			'tag'       => '',
@@ -201,6 +203,10 @@ class WPCH_Ajax
 		// edit_tag is absent from older cached JS — leave the stored tag alone then.
 		if (isset($_POST['edit_tag']) && is_string($_POST['edit_tag'])) {
 			$endpoints[$index]['tag'] = WPCH_Endpoints::sanitize_tag(wp_unslash($_POST['edit_tag']));
+		}
+		// Same guard for edit_login_url ('' clears the override back to the default).
+		if (isset($_POST['edit_login_url']) && is_string($_POST['edit_login_url'])) {
+			$endpoints[$index]['login_url'] = WPCH_Endpoints::normalize_login_url(wp_unslash($_POST['edit_login_url']), $endpoints[$index]['url']);
 		}
 
 		// A newly-created folder, or a move to/from a folder, changes which
@@ -382,8 +388,26 @@ class WPCH_Ajax
 
 		check_ajax_referer('wpch_manage');
 
-		$endpoints     = $this->endpoints->get_all();
-		$statuses      = $this->status_checker->fetch_statuses($endpoints, true);
+		$endpoints = $this->endpoints->get_all();
+
+		// A non-negative 'index' refreshes just that row (the per-row refresh
+		// button): only it is force-fetched, everything else renders from the
+		// cache — the health tabs still need every site's status to regroup.
+		$index = isset($_POST['index']) && '' !== $_POST['index'] ? (int) $_POST['index'] : -1;
+		if ($index >= 0 && ! isset($endpoints[$index])) {
+			wp_send_json_error(['message' => 'Site not found.']);
+		}
+
+		if ($index >= 0) {
+			$statuses          = $this->status_checker->fetch_statuses($endpoints);
+			$forced            = $this->status_checker->fetch_statuses([$index => $endpoints[$index]], true);
+			$statuses[$index]  = $forced[$index];
+			$render_indexes    = [$index];
+		} else {
+			$statuses       = $this->status_checker->fetch_statuses($endpoints, true);
+			$render_indexes = array_keys($endpoints);
+		}
+
 		$all_folders   = $this->folders->get_all();
 		$positions     = $this->admin_page->compute_positions($endpoints, $all_folders);
 		$domain_counts = $this->admin_page->compute_domain_counts($endpoints);
@@ -394,7 +418,8 @@ class WPCH_Ajax
 		}
 
 		$rows = [];
-		foreach ($endpoints as $i => $endpoint) {
+		foreach ($render_indexes as $i) {
+			$endpoint  = $endpoints[$i];
 			$fid       = isset($endpoint['folder_id']) ? $endpoint['folder_id'] : '';
 			$in_folder = $fid && isset($folder_by_id[$fid]);
 

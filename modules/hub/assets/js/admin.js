@@ -16,6 +16,7 @@ function wpchSaveEndpointEdit(index) {
 
 	var urlInput = document.getElementById('wpch-edit-url-' + index);
 	var keyInput = document.getElementById('wpch-edit-key-' + index);
+	var loginInput = document.getElementById('wpch-edit-login-' + index);
 	var tagSelect = document.getElementById('wpch-edit-tag-' + index);
 	var folderSelect = dialog.querySelector('select[name="folder_choice"]');
 
@@ -25,6 +26,9 @@ function wpchSaveEndpointEdit(index) {
 	data.set('index', index);
 	data.set('edit_url', urlInput ? urlInput.value : '');
 	data.set('edit_key', keyInput ? keyInput.value : '');
+	if (loginInput) {
+		data.set('edit_login_url', loginInput.value);
+	}
 	if (tagSelect) {
 		data.set('edit_tag', tagSelect.value);
 	}
@@ -204,6 +208,44 @@ document.addEventListener('click', function (e) {
 		});
 });
 
+// Posts wpch_refresh_statuses (all rows, or just one when index is given),
+// swaps the returned row HTML in place and re-renders the health tabs.
+// Shared by the global Refresh button and the per-row refresh buttons.
+function wpchRefreshStatuses(index) {
+	var data = new FormData();
+	data.set('action', 'wpch_refresh_statuses');
+	data.set('_wpnonce', wpchGetManageNonce());
+	if (index !== undefined && index !== null && index !== '') {
+		data.set('index', index);
+	}
+
+	return fetch(ajaxurl, {
+		method: 'POST',
+		credentials: 'same-origin',
+		body: data,
+	})
+		.then(function (r) {
+			return r.json();
+		})
+		.then(function (res) {
+			if (!res.success) {
+				alert((res.data && res.data.message) || 'Could not refresh sites.');
+				return;
+			}
+			Object.keys(res.data.rows).forEach(function (i) {
+				var row = document.getElementById('wpch-row-' + i);
+				if (row) {
+					row.outerHTML = res.data.rows[i];
+				}
+			});
+			wpchRenumberRows();
+			wpchReplaceHealthTabs(res.data.health_tabs);
+		})
+		.catch(function () {
+			alert('Could not refresh sites. Please try again.');
+		});
+}
+
 document.addEventListener('DOMContentLoaded', function () {
 	var refreshBtn = document.getElementById('wpch-refresh-btn');
 	if (!refreshBtn) {
@@ -212,42 +254,32 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	refreshBtn.addEventListener('click', function () {
 		var btn = this;
-		var data = new FormData();
-		data.set('action', 'wpch_refresh_statuses');
-		data.set('_wpnonce', wpchGetManageNonce());
-
 		btn.disabled = true;
 		btn.textContent = 'Refreshing…';
 
-		fetch(ajaxurl, {
-			method: 'POST',
-			credentials: 'same-origin',
-			body: data,
-		})
-			.then(function (r) {
-				return r.json();
-			})
-			.then(function (res) {
-				if (!res.success) {
-					alert((res.data && res.data.message) || 'Could not refresh sites.');
-					return;
-				}
-				Object.keys(res.data.rows).forEach(function (index) {
-					var row = document.getElementById('wpch-row-' + index);
-					if (row) {
-						row.outerHTML = res.data.rows[index];
-					}
-				});
-				wpchRenumberRows();
-				wpchReplaceHealthTabs(res.data.health_tabs);
-			})
-			.catch(function () {
-				alert('Could not refresh sites. Please try again.');
-			})
-			.finally(function () {
-				btn.disabled = false;
-				btn.textContent = 'Refresh';
-			});
+		wpchRefreshStatuses().finally(function () {
+			btn.disabled = false;
+			btn.textContent = 'Refresh';
+		});
+	});
+});
+
+// Per-row refresh buttons. Delegated on document: a refresh replaces the
+// row's markup (button included), so a direct listener would be lost.
+document.addEventListener('click', function (e) {
+	var btn = e.target.closest('.refresh-row');
+	if (!btn) {
+		return;
+	}
+
+	btn.disabled = true;
+	btn.classList.add('wpch-refreshing');
+
+	wpchRefreshStatuses(btn.getAttribute('data-index')).finally(function () {
+		// On success the row (and this button) was replaced by fresh markup —
+		// this only matters when the request failed and the button survived.
+		btn.disabled = false;
+		btn.classList.remove('wpch-refreshing');
 	});
 });
 

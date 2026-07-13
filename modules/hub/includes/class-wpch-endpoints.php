@@ -281,6 +281,32 @@ class WPCH_Endpoints
 		return self::strip_status_path($endpoint_url) . '/panda-login/';
 	}
 
+	// The row's Login link: the endpoint's own 'login_url' when one is set,
+	// otherwise the shared default (/panda-login/ on the site's base URL).
+	public static function login_url_for(array $endpoint): string
+	{
+		if (! empty($endpoint['login_url'])) {
+			return $endpoint['login_url'];
+		}
+		return self::login_url($endpoint['url']);
+	}
+
+	// Normalizes the per-endpoint login URL a user typed: '' keeps the default,
+	// a full http(s) URL is stored as-is, and anything else (e.g. "/wp-admin/"
+	// or "wp-login.php") is treated as a path on the site's base URL.
+	// $endpoint_url is the row's stored (status-route) URL.
+	public static function normalize_login_url(string $input, string $endpoint_url): string
+	{
+		$input = trim($input);
+		if ('' === $input) {
+			return '';
+		}
+		if (preg_match('#^https?://#i', $input)) {
+			return esc_url_raw($input);
+		}
+		return esc_url_raw(self::strip_status_path($endpoint_url) . '/' . ltrim($input, '/'));
+	}
+
 	// The base site URL without the /wp-json/wpconnector/v1/status suffix,
 	// for showing/editing in the UI; normalize_url() re-adds it on save.
 	public static function display_url(string $endpoint_url): string

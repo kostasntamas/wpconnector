@@ -181,6 +181,7 @@ td {
 	padding: 0 0.55em;
 	font-weight: 400;
 	font-size: small;
+	user-select: text;
 }
 tr th[scope='row'] {
 	border-right: 1px solid color-mix(in hsl, var(--border), white);
@@ -565,7 +566,7 @@ tr.child-row:last-child {
 		bottom: anchor(center --last-folder-item);
 		border-left: 1px dashed color-mix(in hsl, var(--folder), black);
 		border-bottom: 1px dashed color-mix(in hsl, var(--folder), black);
-		border-radius: 0 0 0 100vmax;
+		border-radius: 0 0 0 4px;
 	}
 }
 

@@ -159,9 +159,11 @@ class WPCH_Admin_Page
 			$action = sanitize_text_field($_POST['wpch_action']);
 
 			if ('add' === $action && ! empty($_POST['new_url']) && is_string($_POST['new_url'])) {
+				$url = esc_url_raw(WPCH_Endpoints::normalize_url($_POST['new_url']));
 				$this->endpoints->add([
-					'url'       => esc_url_raw(WPCH_Endpoints::normalize_url($_POST['new_url'])),
+					'url'       => $url,
 					'key'       => isset($_POST['new_key']) ? sanitize_text_field(trim($_POST['new_key'])) : '',
+					'login_url' => isset($_POST['new_login_url']) && is_string($_POST['new_login_url']) ? WPCH_Endpoints::normalize_login_url(wp_unslash($_POST['new_login_url']), $url) : '',
 					'folder_id' => $this->folders->resolve_choice($_POST),
 					'comments'  => [],
 					'tag'       => '',
@@ -263,6 +265,7 @@ class WPCH_Admin_Page
 				'id'        => $id,
 				'url'       => esc_url_raw(WPCH_Endpoints::normalize_url($row['url'])),
 				'key'       => isset($row['key']) ? sanitize_text_field($row['key']) : '',
+				'login_url' => isset($row['login_url']) && is_string($row['login_url']) ? esc_url_raw($row['login_url']) : '',
 				'folder_id' => isset($row['folder_id']) ? sanitize_text_field($row['folder_id']) : '',
 				'comments'  => $comments,
 				'tag'       => isset($row['tag']) && is_string($row['tag']) ? WPCH_Endpoints::sanitize_tag($row['tag']) : '',
@@ -523,7 +526,7 @@ class WPCH_Admin_Page
 	}
 
 	// $status is the endpoint's decoded payload array, or a WP_Error when the
-	// site was unreachable — it can't be type-hinted on PHP 7.4 (no unions).
+	// site was unreachable — it can't be type-hinted on PHP 7.x (no unions).
 	public function render_endpoint_row(int $i, array $endpoint, $status, bool $in_folder, array $folders = [], $position = null, array $domain_counts = [])
 	{
 		$is_error   = is_wp_error($status);
@@ -555,7 +558,7 @@ class WPCH_Admin_Page
 	?>
 		<tr id="wpch-row-<?php echo esc_attr($i); ?>" data-id="<?php echo esc_attr(isset($endpoint['id']) ? $endpoint['id'] : ''); ?>" <?php /* echo $in_folder ? ' class="child-row"' : ''; */ ?> class="child-row" draggable="true">
 			<th scope="row"><?php echo (int) $position; ?></th>
-			<td><a href="<?php echo esc_url(WPCH_Endpoints::login_url($endpoint['url'])); ?>" target="_blank">Login</a></td>
+			<td><a href="<?php echo esc_url(WPCH_Endpoints::login_url_for($endpoint)); ?>" target="_blank">Login</a></td>
 			<td style="text-align: left">
 				<strong><a target="_blank" href="<?php echo esc_url($row_label); ?>"><?php echo esc_html($row_label); ?></a></strong>
 				<?php $this->render_tag_badge($tag); ?>
@@ -585,6 +588,9 @@ class WPCH_Admin_Page
 					<button type="button" class="button edit-button" title="Edit row" command="show-modal" commandfor="wpch-edit-dialog-<?php echo esc_attr($i); ?>">
 						<?php echo WPCH_Icons::get('edit', 20); ?>
 					</button>
+					<button type="button" class="button refresh-row" title="Refresh this site only" data-index="<?php echo (int) $i; ?>">
+						<?php echo WPCH_Icons::get('refresh', 20); ?>
+					</button>
 					<button type="button" title="Add Comments" class="button comment-btn" onclick="wpchOpenComment(<?php echo (int) $i; ?>)"><?php echo $comment_icon; ?><?php if ($comments) : ?><span class="wpch-comment-count"><?php echo count($comments); ?></span><?php endif; ?></button>
 					<a title="Delete row" href="<?php echo esc_url(wp_nonce_url(add_query_arg('wpch_delete', $i), 'wpch_delete_' . $i)); ?>" class="wpch-delete-link" data-index="<?php echo esc_attr($i); ?>" data-folder-id="<?php echo esc_attr($folder_id); ?>" onclick="return confirm('Delete this endpoint?');" style="color:#b32d2e;">Delete</a>
 					<button title="Move row" type="button" class="move">
@@ -606,6 +612,10 @@ class WPCH_Admin_Page
 							<label style="text-align: start;display:flex;flex-direction:column;gap:4px;">
 								Secret key
 								<input type="text" data-type="secret-key" autocomplete="off" id="wpch-edit-key-<?php echo esc_attr($i); ?>" value="<?php echo esc_attr($endpoint['key']); ?>" style="max-width:100%;width:100%;">
+							</label>
+							<label style="text-align: start;display:flex;flex-direction:column;gap:4px;" title="Where this row's Login link points. Full URL or a path like /wp-admin/ — leave empty for the default login URL.">
+								Login URL <small style="font-weight:400;color:#666;">(empty = default)</small>
+								<input type="text" id="wpch-edit-login-<?php echo esc_attr($i); ?>" value="<?php echo esc_attr(isset($endpoint['login_url']) ? $endpoint['login_url'] : ''); ?>" placeholder="<?php echo esc_attr(WPCH_Endpoints::login_url($endpoint['url'])); ?>" style="max-width:100%;width:100%;">
 							</label>
 							<label style="text-align: start;display:flex;flex-direction:column;gap:4px;">
 								Tag
@@ -678,6 +688,7 @@ class WPCH_Admin_Page
 			$domain = wp_parse_url($endpoint['url'], PHP_URL_HOST);
 			$groups[$health['label']][] = [
 				'url'    => $endpoint['url'],
+				'login'  => WPCH_Endpoints::login_url_for($endpoint),
 				'domain' => $domain ? $domain : $endpoint['url'],
 				'tag'    => isset($endpoint['tag']) ? $endpoint['tag'] : '',
 				'error'  => $is_error ? $status->get_error_message() : '',
@@ -730,7 +741,7 @@ class WPCH_Admin_Page
 							<?php foreach ($rows as $n => $row) : ?>
 								<tr>
 									<th scope="row"><?php echo (int) $n + 1; ?></th>
-									<td><a href="<?php echo esc_url(WPCH_Endpoints::login_url($row['url'])); ?>" target="_blank">Login</a></td>
+									<td><a href="<?php echo esc_url($row['login']); ?>" target="_blank">Login</a></td>
 									<td style="text-align: left"><strong><a target="_blank" href="<?php echo esc_url($row['url']); ?>"><?php echo esc_html($row['domain']); ?></a></strong><?php $this->render_tag_badge($row['tag']); ?></td>
 									<?php if ('Offline' === $label) : ?>
 										<td style="text-align: left"><?php echo esc_html($row['error']); ?></td>
@@ -916,6 +927,7 @@ class WPCH_Admin_Page
 						<input type="hidden" name="wpch_action" value="add">
 						<input type="text" name="new_url" placeholder="https://example.com">
 						<input type="text" data-type="secret-key" name="new_key" autocomplete="off" placeholder="Secret key">
+						<input type="text" name="new_login_url" placeholder="Login URL (optional)" title="Where this site's Login link points. Full URL or a path like /wp-admin/ — leave empty for the default login URL.">
 						<?php $this->render_folder_picker_fields('add', $folders); ?>
 						<button type="submit" class="button button-primary">Add Site</button>
 					</form>

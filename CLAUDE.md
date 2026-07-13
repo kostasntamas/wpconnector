@@ -32,5 +32,7 @@ Per-site comments are a chat thread stored in each endpoint's `comments` array �
 
 - Same option names as the standalone plugins (`wpce_secret_key`, `wpch_endpoints_list`, `wpch_folders`, ...), so data migrates automatically in both directions.
 - Switching modes never deletes data — an unloaded module's options stay in the DB.
+- Each endpoint may carry a `login_url` override (`''` = the default `<base>/panda-login/`), resolved via `WPCH_Endpoints::login_url_for()`; it's set from the Add form (`new_login_url`) or the row's edit dialog (`edit_login_url`), normalized by `normalize_login_url()` (a bare path like `/wp-admin/` is resolved against the site's base URL), and survives JSON export/import.
+- The `wpch_refresh_statuses` AJAX action takes an optional `index`: when set (the per-row refresh icon), only that site is force-fetched and returned in `rows`, while the other statuses come from cache so the health tabs can still regroup; without it, everything is force-fetched (the global Refresh button).
 - Requires PHP 7.0+ — avoid 7.1+-only syntax in all module code (see Conventions).
 - The GitHub repo referenced by the update checker must have version tags (or a higher `Version:` header on the `main` branch) before updates will be offered; until then PUC simply finds no updates.
