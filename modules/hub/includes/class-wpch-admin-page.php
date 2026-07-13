@@ -431,21 +431,27 @@ class WPCH_Admin_Page
 	{
 	?>
 		<td>
-			<?php
-			echo ' <span style="font-weight:500; cursor: help;" title="total">';
-			echo esc_html($status['plugins_total']);
-			echo ' </span>';
-			echo ' / ';
-			echo ' <span style="font-weight:500; cursor: help;" title="active">';
-			echo esc_html($status['plugins_active']);
-			echo ' </span>';
-			echo '/ ';
-			echo ' <span style="font-weight:500; cursor: help;" title="inactive">';
-			echo esc_html($status['plugins_inactive']);
-			echo ' </span>';
-			?>
 			<?php if (! empty($status['plugins'])) : ?>
-				<button type="button" command="show-modal" commandfor="<?php echo esc_attr($dialog_id); ?>" style="margin-left: 1ch;" class="row-button button">View Plugins</button>
+				<div style="display: flex;flex-direction: column;align-items: center;justify-content: center;">
+				<?php endif; ?>
+				<?php
+				echo ' <div>';
+				echo ' <span style="font-weight:500; cursor: help;" title="total">';
+				echo esc_html($status['plugins_total']);
+				echo ' </span>';
+				echo ' / ';
+				echo ' <span style="font-weight:500; cursor: help;" title="active">';
+				echo esc_html($status['plugins_active']);
+				echo ' </span>';
+				echo '/ ';
+				echo ' <span style="font-weight:500; cursor: help;" title="inactive">';
+				echo esc_html($status['plugins_inactive']);
+				echo ' </span>';
+				echo ' </div>';
+				?>
+				<?php if (! empty($status['plugins'])) : ?>
+					<button type="button" command="show-modal" commandfor="<?php echo esc_attr($dialog_id); ?>" style="margin-left: 1ch;" class="row-button button">View Plugins</button>
+				</div>
 				<dialog id="<?php echo esc_attr($dialog_id); ?>" style="min-width: 550px;max-width:90vw;">
 					<div style="padding:16px;">
 						<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -577,7 +583,9 @@ class WPCH_Admin_Page
 			<?php if ($is_error) : ?>
 				<td colspan="5" style="color:#b32d2e;">Error: <?php echo esc_html($status->get_error_message()); ?></td>
 			<?php else : ?>
-				<td><?php echo esc_html($status['wp_version']); ?> <span style="color:<?php echo esc_attr($wp_status['color']); ?>;" <?php if (! empty($status['wp_update_available']) && ! empty($status['wp_latest_version'])) : ?>title="<?php echo esc_attr('Latest: ' . $status['wp_latest_version']); ?>" <?php endif; ?>>(<?php echo esc_html($wp_status['label']); ?>)</span></td>
+				<td>
+					<div style="display: flex;align-items: center;text-wrap: nowrap;gap: 1ch;"><?php echo esc_html($status['wp_version']); ?> <span style="color:<?php echo esc_attr($wp_status['color']); ?>;" <?php if (! empty($status['wp_update_available']) && ! empty($status['wp_latest_version'])) : ?>title="<?php echo esc_attr('Latest: ' . $status['wp_latest_version']); ?>" <?php endif; ?>>(<?php echo esc_html($wp_status['label']); ?>)</span></div>
+				</td>
 				<td><?php echo esc_html($status['php_version']); ?> <span style="color:<?php echo esc_attr($php_status['color']); ?>;">(<?php echo esc_html($php_status['label']); ?>)</span></td>
 				<?php $this->render_plugins_cell('wpch-plugins-' . $i, $row_label, $status); ?>
 				<?php $this->render_auto_updates_cell($status); ?>

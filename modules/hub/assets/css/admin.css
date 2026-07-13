@@ -662,6 +662,10 @@ label.wpch-swatch {
 }
 
 .wpch-search-btn {
+	position: fixed;
+	top: 0.7rem;
+	left: auto;
+	right: 0.7rem;
 	cursor: pointer;
 	border: 1px solid #c3c4c7;
 	background: #fff;
@@ -678,11 +682,12 @@ label.wpch-swatch {
 	border-radius: 3px;
 	padding: 0.1em 0.4em;
 	background: #f6f7f7;
+	margin-left: 20px;
 }
 
 dialog.wpch-search {
 	position: fixed;
-	top: 16vh;
+	top: 0.7rem;
 	left: 50%;
 	translate: -50% 0;
 	margin: 0;
