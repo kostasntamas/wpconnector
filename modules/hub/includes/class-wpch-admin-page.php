@@ -566,7 +566,7 @@ class WPCH_Admin_Page
 			<th scope="row"><?php echo (int) $position; ?></th>
 			<td><a href="<?php echo esc_url(WPCH_Endpoints::login_url_for($endpoint)); ?>" target="_blank">Login</a></td>
 			<td style="text-align: left">
-				<strong><a target="_blank" href="<?php echo esc_url($row_label); ?>"><?php echo esc_html($row_label); ?></a></strong>
+				<strong><a target="_blank" class="domain" style="display: flex; align-items: center;justify-content: center; gap: 1ch;" href="<?php echo esc_url($row_label); ?>"><?php echo esc_html($row_label); ?></a></strong>
 				<?php $this->render_tag_badge($tag); ?>
 				<?php if ($is_duplicate) : ?>
 					<span class="wpch-dup-badge" title="<?php echo esc_attr(sprintf('This domain appears in %d entries — each keeps its own key/folder/comment.', $domain_count)); ?>">&#9888; duplicate</span>
@@ -740,7 +740,7 @@ class WPCH_Admin_Page
 								<?php else : ?>
 									<th scope="col">WP Version</th>
 									<th scope="col">PHP Version</th>
-									<th scope="col">Plugins <small>( total / active / inactive )</small></th>
+									<th scope="col">Plugins <em style="text-wrap: nowrap;font-size: .7em;">( total / active / inactive )</em></th>
 									<th scope="col">Auto Updates</th>
 								<?php endif; ?>
 							</tr>
@@ -955,7 +955,7 @@ class WPCH_Admin_Page
 					<dialog id="wpch-search" class="wpch-search">
 						<input type="text" id="wpch-search-input" placeholder="Filter sites by domain&hellip;" autocomplete="off">
 						<span class="wpch-search-count" id="wpch-search-count"></span>
-						<small>Enter keeps the filter &middot; Esc clears</small>
+						<em style="font-size:smaller; opacity: .65;">Enter keeps the filter &middot; Esc clears</em>
 					</dialog>
 					<?php
 					// The whole tab system (tab bar + tier panels + the main-table

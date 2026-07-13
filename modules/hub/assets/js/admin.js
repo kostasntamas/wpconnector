@@ -296,6 +296,12 @@ document.addEventListener('click', function (e) {
 
 var wpchSearchQuery = '';
 
+// Folders the filter forced open so their matching rows are visible, mapped
+// to the open state to restore once the query clears (checkbox id => original
+// checked). The checkboxes are flipped programmatically, which fires no
+// change event — so folders.js never persists the temporary expansion.
+var wpchSearchOpenedFolders = {};
+
 function wpchApplyDomainFilter(query) {
 	wpchSearchQuery = (query || '').trim().toLowerCase();
 
@@ -316,11 +322,32 @@ function wpchApplyDomainFilter(query) {
 		}
 	});
 
-	// Collapse folder groups (and the ungrouped block) with no matches left.
+	// Collapse folder groups (and the ungrouped block) with no matches left,
+	// and expand collapsed groups that do hold a match — otherwise the CSS
+	// that hides a closed folder's rows would keep the hit invisible.
 	table.querySelectorAll(':scope > tbody').forEach(function (tbody) {
 		var any = tbody.querySelector('tr:not(.parent-row):not(.wpch-search-miss)');
 		tbody.classList.toggle('wpch-search-miss', '' !== wpchSearchQuery && !any);
+
+		var toggle = tbody.querySelector('.parent-row input[type="checkbox"]');
+		if ('' !== wpchSearchQuery && any && toggle && !toggle.checked) {
+			if (!(toggle.id in wpchSearchOpenedFolders)) {
+				wpchSearchOpenedFolders[toggle.id] = false;
+			}
+			toggle.checked = true;
+		}
 	});
+
+	// Query cleared: fold the force-opened groups back to how the user had them.
+	if ('' === wpchSearchQuery) {
+		Object.keys(wpchSearchOpenedFolders).forEach(function (id) {
+			var toggle = document.getElementById(id);
+			if (toggle) {
+				toggle.checked = wpchSearchOpenedFolders[id];
+			}
+		});
+		wpchSearchOpenedFolders = {};
+	}
 
 	var count = document.getElementById('wpch-search-count');
 	if (count) {
@@ -361,6 +388,15 @@ function wpchCloseSearch(clear) {
 		dlg.close();
 	}
 }
+
+// A manual folder toggle while the filter is active (change only fires on
+// user interaction) is an explicit choice — leave it alone when the query
+// clears instead of restoring the pre-search state.
+document.addEventListener('change', function (e) {
+	if (e.target.id && 0 === e.target.id.indexOf('wpch-folder-toggle-')) {
+		delete wpchSearchOpenedFolders[e.target.id];
+	}
+});
 
 document.addEventListener('keydown', function (e) {
 	if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && 'k' === e.key.toLowerCase()) {

@@ -24,7 +24,7 @@
 	/* box-sizing: border-box; */
 	height: 100vh;
 	position: sticky;
-	top: 0;
+	top: 3rem;
 }
 
 .wpch-sidebar a {
@@ -169,7 +169,7 @@ thead th {
 	top: 10px;
 	background: var(--tab-color, #00325c);
 	text-transform: capitalize;
-	font-size: 1.025rem;
+	font-size: 1rem;
 	font-weight: 500;
 	color: white;
 	z-index: 1;
@@ -613,6 +613,7 @@ label.wpch-swatch {
 }
 
 .wpch-health-tabs {
+	margin-block-start: 2em;
 	margin-block-end: 2em;
 }
 
