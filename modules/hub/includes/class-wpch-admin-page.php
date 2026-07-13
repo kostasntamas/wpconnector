@@ -564,14 +564,16 @@ class WPCH_Admin_Page
 	?>
 		<tr id="wpch-row-<?php echo esc_attr($i); ?>" data-id="<?php echo esc_attr(isset($endpoint['id']) ? $endpoint['id'] : ''); ?>" data-domain="<?php echo esc_attr($row_label); ?>" <?php /* echo $in_folder ? ' class="child-row"' : ''; */ ?> class="child-row" draggable="true">
 			<th scope="row"><?php echo (int) $position; ?></th>
-			<td><a href="<?php echo esc_url(WPCH_Endpoints::login_url_for($endpoint)); ?>" target="_blank">Login</a></td>
+			<td><a href="<?php echo esc_url(WPCH_Endpoints::login_url_for($endpoint)); ?>" target="_blank" style="display: flex;align-items: center; gap: 1ch;">Login</a></td>
 			<td style="text-align: left">
-				<strong><a target="_blank" class="domain" style="display: flex; align-items: center;justify-content: center; gap: 1ch;" href="<?php echo esc_url($row_label); ?>"><?php echo esc_html($row_label); ?></a></strong>
-				<?php $this->render_tag_badge($tag); ?>
-				<?php if ($is_duplicate) : ?>
-					<span class="wpch-dup-badge" title="<?php echo esc_attr(sprintf('This domain appears in %d entries — each keeps its own key/folder/comment.', $domain_count)); ?>">&#9888; duplicate</span>
-				<?php endif; ?>
-				<input type="hidden" name="endpoints[<?php echo esc_attr($i); ?>][folder_id]" value="<?php echo esc_attr($folder_id); ?>">
+				<div style="display: flex;align-items: center;justify-content: space-between;gap:.4em;">
+					<strong><a target="_blank" class="domain" style="display: flex; align-items: center; gap: 1ch;" href="<?php echo esc_url($row_label); ?>"><?php echo esc_html($row_label); ?></a></strong>
+					<?php $this->render_tag_badge($tag); ?>
+					<?php if ($is_duplicate) : ?>
+						<span class="wpch-dup-badge" title="<?php echo esc_attr(sprintf('This domain appears in %d entries — each keeps its own key/folder/comment.', $domain_count)); ?>">&#9888; duplicate</span>
+					<?php endif; ?>
+					<input type="hidden" name="endpoints[<?php echo esc_attr($i); ?>][folder_id]" value="<?php echo esc_attr($folder_id); ?>">
+				</div>
 			</td>
 			<td style="text-align: center;">
 				<span style="color:<?php echo esc_attr($health['color']); ?>;font-weight:bold;"><?php echo esc_html($health['label']); ?></span>
