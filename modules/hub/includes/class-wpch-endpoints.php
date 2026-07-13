@@ -278,11 +278,11 @@ class WPCH_Endpoints
 
 	public static function login_url(string $endpoint_url): string
 	{
-		return self::strip_status_path($endpoint_url) . '/panda-login/';
+		return self::strip_status_path($endpoint_url) . '/wp-admin/';
 	}
 
 	// The row's Login link: the endpoint's own 'login_url' when one is set,
-	// otherwise the shared default (/panda-login/ on the site's base URL).
+	// otherwise the shared default (/wp-admin/ on the site's base URL).
 	public static function login_url_for(array $endpoint): string
 	{
 		if (! empty($endpoint['login_url'])) {
