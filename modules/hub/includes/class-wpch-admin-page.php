@@ -556,7 +556,7 @@ class WPCH_Admin_Page
 			}
 		}
 	?>
-		<tr id="wpch-row-<?php echo esc_attr($i); ?>" data-id="<?php echo esc_attr(isset($endpoint['id']) ? $endpoint['id'] : ''); ?>" <?php /* echo $in_folder ? ' class="child-row"' : ''; */ ?> class="child-row" draggable="true">
+		<tr id="wpch-row-<?php echo esc_attr($i); ?>" data-id="<?php echo esc_attr(isset($endpoint['id']) ? $endpoint['id'] : ''); ?>" data-domain="<?php echo esc_attr($row_label); ?>" <?php /* echo $in_folder ? ' class="child-row"' : ''; */ ?> class="child-row" draggable="true">
 			<th scope="row"><?php echo (int) $position; ?></th>
 			<td><a href="<?php echo esc_url(WPCH_Endpoints::login_url_for($endpoint)); ?>" target="_blank">Login</a></td>
 			<td style="text-align: left">
@@ -741,7 +741,7 @@ class WPCH_Admin_Page
 							<?php foreach ($rows as $n => $row) : ?>
 								<tr>
 									<th scope="row"><?php echo (int) $n + 1; ?></th>
-									<td><a href="<?php echo esc_url($row['login']); ?>" target="_blank">Login</a></td>
+									<td><a href="<?php echo esc_url($row['login']); ?>" class="login" target="_blank">Login</a></td>
 									<td style="text-align: left"><strong><a target="_blank" href="<?php echo esc_url($row['url']); ?>"><?php echo esc_html($row['domain']); ?></a></strong><?php $this->render_tag_badge($row['tag']); ?></td>
 									<?php if ('Offline' === $label) : ?>
 										<td style="text-align: left"><?php echo esc_html($row['error']); ?></td>
@@ -936,7 +936,19 @@ class WPCH_Admin_Page
 						Sites
 						<span class="wpch-total-count"><?php echo count($endpoints); ?> total</span>
 						<button type="button" id="wpch-refresh-btn" class="button refresh-button button-small">Refresh</button>
+						<button type="button" id="wpch-search-btn" class="button button-small wpch-search-btn" title="Filter the table by domain">Search <kbd>Ctrl+K</kbd></button>
 					</h2>
+
+					<?php
+					// Ctrl+K domain filter: a small non-modal palette (admin.js opens
+					// it with dialog.show() so the table behind stays interactive and
+					// filters live while typing). Enter keeps the filter, Esc clears it.
+					?>
+					<dialog id="wpch-search" class="wpch-search">
+						<input type="text" id="wpch-search-input" placeholder="Filter sites by domain&hellip;" autocomplete="off">
+						<span class="wpch-search-count" id="wpch-search-count"></span>
+						<small>Enter keeps the filter &middot; Esc clears</small>
+					</dialog>
 					<?php
 					// The whole tab system (tab bar + tier panels + the main-table
 					// panel below) must share this one .wpch-health-tabs container —

@@ -102,6 +102,12 @@ function wpchRenumberRows() {
 			countEl.textContent = '(' + tbody.querySelectorAll('tr:not(.parent-row)').length + ')';
 		}
 	});
+
+	// Row swaps (add/edit/refresh) produce fresh markup without the filter
+	// class — re-hide whatever doesn't match the active Ctrl+K query.
+	if (wpchSearchQuery) {
+		wpchApplyDomainFilter(wpchSearchQuery);
+	}
 }
 
 function wpchInsertRow(data) {
@@ -281,6 +287,111 @@ document.addEventListener('click', function (e) {
 		btn.disabled = false;
 		btn.classList.remove('wpch-refreshing');
 	});
+});
+
+// ---- Ctrl+K domain filter ----
+// A small non-modal palette (#wpch-search) that live-filters the main table
+// by the rows' data-domain attribute only — keys, tags and comments are never
+// matched. Enter closes the palette and keeps the filter; Esc clears it.
+
+var wpchSearchQuery = '';
+
+function wpchApplyDomainFilter(query) {
+	wpchSearchQuery = (query || '').trim().toLowerCase();
+
+	var table = document.getElementById('wpch-status-table');
+	if (!table) {
+		return;
+	}
+
+	var total = 0;
+	var shown = 0;
+	table.querySelectorAll(':scope > tbody > tr:not(.parent-row)').forEach(function (row) {
+		total++;
+		var domain = (row.getAttribute('data-domain') || '').toLowerCase();
+		var match = '' === wpchSearchQuery || domain.indexOf(wpchSearchQuery) !== -1;
+		row.classList.toggle('wpch-search-miss', !match);
+		if (match) {
+			shown++;
+		}
+	});
+
+	// Collapse folder groups (and the ungrouped block) with no matches left.
+	table.querySelectorAll(':scope > tbody').forEach(function (tbody) {
+		var any = tbody.querySelector('tr:not(.parent-row):not(.wpch-search-miss)');
+		tbody.classList.toggle('wpch-search-miss', '' !== wpchSearchQuery && !any);
+	});
+
+	var count = document.getElementById('wpch-search-count');
+	if (count) {
+		count.textContent = '' === wpchSearchQuery ? '' : shown + ' / ' + total;
+	}
+}
+
+function wpchOpenSearch() {
+	var dlg = document.getElementById('wpch-search');
+	if (!dlg) {
+		return;
+	}
+
+	// The filter only acts on the main table — bring its tab to the front.
+	var allTab = document.querySelector('.wpch-health-tab[data-tab="all"]');
+	if (allTab) {
+		wpchActivateHealthTab(allTab);
+	}
+
+	if (!dlg.open) {
+		dlg.show(); // non-modal: the table stays visible and interactive
+	}
+	var input = document.getElementById('wpch-search-input');
+	input.focus();
+	input.select();
+}
+
+function wpchCloseSearch(clear) {
+	var dlg = document.getElementById('wpch-search');
+	if (!dlg) {
+		return;
+	}
+	if (clear) {
+		document.getElementById('wpch-search-input').value = '';
+		wpchApplyDomainFilter('');
+	}
+	if (dlg.open) {
+		dlg.close();
+	}
+}
+
+document.addEventListener('keydown', function (e) {
+	if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && 'k' === e.key.toLowerCase()) {
+		if (document.getElementById('wpch-search')) {
+			e.preventDefault();
+			wpchOpenSearch();
+		}
+	}
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+	var input = document.getElementById('wpch-search-input');
+	if (input) {
+		input.addEventListener('input', function () {
+			wpchApplyDomainFilter(this.value);
+		});
+		input.addEventListener('keydown', function (e) {
+			if ('Escape' === e.key) {
+				e.preventDefault();
+				wpchCloseSearch(true);
+			} else if ('Enter' === e.key) {
+				e.preventDefault();
+				wpchCloseSearch(false);
+			}
+		});
+	}
+
+	var searchBtn = document.getElementById('wpch-search-btn');
+	if (searchBtn) {
+		searchBtn.addEventListener('click', wpchOpenSearch);
+	}
 });
 
 // Sites tab system: show the clicked tab's panel (the full Sites Status
