@@ -602,7 +602,7 @@ class WPCH_Admin_Page
 						<?php echo WPCH_Icons::get('refresh', 20); ?>
 					</button>
 					<button type="button" title="Add Comments" class="button comment-btn" onclick="wpchOpenComment(<?php echo (int) $i; ?>)"><?php echo $comment_icon; ?><?php if ($comments) : ?><span class="wpch-comment-count"><?php echo count($comments); ?></span><?php endif; ?></button>
-					<a title="Delete row" href="<?php echo esc_url(wp_nonce_url(add_query_arg('wpch_delete', $i), 'wpch_delete_' . $i)); ?>" class="wpch-delete-link" data-index="<?php echo esc_attr($i); ?>" data-folder-id="<?php echo esc_attr($folder_id); ?>" onclick="return confirm('Delete this endpoint?');" style="color:#b32d2e;">Delete</a>
+					<a title="Delete row" href="<?php echo esc_url(wp_nonce_url(add_query_arg('wpch_delete', $i), 'wpch_delete_' . $i)); ?>" class="wpch-delete-link" data-index="<?php echo esc_attr($i); ?>" data-folder-id="<?php echo esc_attr($folder_id); ?>" onclick="return confirm('Delete this endpoint?');" style="color:#b32d2e;"><?php echo WPCH_Icons::get('trash', 20); ?></a>
 					<button title="Move row" type="button" class="move">
 						<?php echo WPCH_Icons::get('move', 20); ?>
 					</button>
