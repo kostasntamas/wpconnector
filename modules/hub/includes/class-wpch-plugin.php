@@ -9,17 +9,23 @@ if (! defined('ABSPATH')) {
  */
 class WPCH_Plugin
 {
-	private WPCH_Endpoints $endpoints;
+	/** @var WPCH_Endpoints */
+	private $endpoints;
 
-	private WPCH_Folders $folders;
+	/** @var WPCH_Folders */
+	private $folders;
 
-	private WPCH_Status_Checker $status_checker;
+	/** @var WPCH_Status_Checker */
+	private $status_checker;
 
-	private WPCH_Admin_Page $admin_page;
+	/** @var WPCH_Admin_Page */
+	private $admin_page;
 
-	private WPCH_Ajax $ajax;
+	/** @var WPCH_Ajax */
+	private $ajax;
 
-	private WPCH_Comment_Sync $comment_sync;
+	/** @var WPCH_Comment_Sync */
+	private $comment_sync;
 
 	public function __construct()
 	{
@@ -31,7 +37,7 @@ class WPCH_Plugin
 		$this->ajax           = new WPCH_Ajax($this->endpoints, $this->folders, $this->status_checker, $this->admin_page);
 	}
 
-	public function init(): void
+	public function init()
 	{
 		// The plugin update checker is initialized in wpconnector.php so it
 		// runs in every mode, not only when the hub module is loaded.

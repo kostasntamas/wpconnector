@@ -16,9 +16,11 @@ if (! defined('ABSPATH')) {
  */
 class WPCH_Comment_Sync
 {
-	private WPCH_Endpoints $endpoints;
+	/** @var WPCH_Endpoints */
+	private $endpoints;
 
-	private WPCH_Admin_Page $admin_page;
+	/** @var WPCH_Admin_Page */
+	private $admin_page;
 
 	public function __construct(WPCH_Endpoints $endpoints, WPCH_Admin_Page $admin_page)
 	{
@@ -26,7 +28,7 @@ class WPCH_Comment_Sync
 		$this->admin_page = $admin_page;
 	}
 
-	public function register(): void
+	public function register()
 	{
 		add_filter('heartbeat_received', [$this, 'heartbeat'], 10, 2);
 	}

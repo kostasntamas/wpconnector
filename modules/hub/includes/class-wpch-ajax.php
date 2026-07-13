@@ -9,13 +9,17 @@ if (! defined('ABSPATH')) {
  */
 class WPCH_Ajax
 {
-	private WPCH_Endpoints $endpoints;
+	/** @var WPCH_Endpoints */
+	private $endpoints;
 
-	private WPCH_Folders $folders;
+	/** @var WPCH_Folders */
+	private $folders;
 
-	private WPCH_Status_Checker $status_checker;
+	/** @var WPCH_Status_Checker */
+	private $status_checker;
 
-	private WPCH_Admin_Page $admin_page;
+	/** @var WPCH_Admin_Page */
+	private $admin_page;
 
 	public function __construct(WPCH_Endpoints $endpoints, WPCH_Folders $folders, WPCH_Status_Checker $status_checker, WPCH_Admin_Page $admin_page)
 	{
@@ -25,7 +29,7 @@ class WPCH_Ajax
 		$this->admin_page     = $admin_page;
 	}
 
-	public function register(): void
+	public function register()
 	{
 		add_action('wp_ajax_wpch_add_endpoint', [$this, 'add_endpoint']);
 		add_action('wp_ajax_wpch_delete_endpoint', [$this, 'delete_endpoint']);
@@ -41,7 +45,7 @@ class WPCH_Ajax
 	// Called from folders.js when a folder group is collapsed/expanded:
 	// persists the per-user open state in user meta (WPCH_Folders::set_open_state()),
 	// so the settings page renders each group the way this user left it.
-	public function folder_state(): void
+	public function folder_state()
 	{
 		if (! current_user_can('manage_options')) {
 			wp_send_json_error(['message' => 'Forbidden'], 403);
@@ -63,7 +67,7 @@ class WPCH_Ajax
 	// {id, folder_id} in the table's DOM order, folder_order = csv of folder
 	// ids in block order. Rewrites each endpoint's 'order'/'folder_id' and the
 	// wpch_folders option order.
-	public function reorder(): void
+	public function reorder()
 	{
 		if (! current_user_can('manage_options')) {
 			wp_send_json_error(['message' => 'Forbidden'], 403);
@@ -98,7 +102,7 @@ class WPCH_Ajax
 		wp_send_json_success();
 	}
 
-	public function add_endpoint(): void
+	public function add_endpoint()
 	{
 		if (! current_user_can('manage_options')) {
 			wp_send_json_error(['message' => 'Forbidden'], 403);
@@ -169,7 +173,7 @@ class WPCH_Ajax
 		]);
 	}
 
-	public function update_endpoint(): void
+	public function update_endpoint()
 	{
 		if (! current_user_can('manage_options')) {
 			wp_send_json_error(['message' => 'Forbidden'], 403);
@@ -232,7 +236,7 @@ class WPCH_Ajax
 	// thread HTML (the popover swaps it in wholesale), a revision hash for the
 	// heartbeat live-refresh to compare against, and the total message count
 	// for the row button's badge.
-	private function send_thread(int $index, array $comments): void
+	private function send_thread(int $index, array $comments)
 	{
 		ob_start();
 		$this->admin_page->render_comments($index, $comments);
@@ -269,7 +273,7 @@ class WPCH_Ajax
 	// Appends a chat message (or a reply, when 'parent' is a comment id) to
 	// the row's thread. Append-only, so unlike the old single-comment save
 	// there is no overwrite conflict to guard against.
-	public function comment_add(): void
+	public function comment_add()
 	{
 		list($index, $endpoints, $comments) = $this->require_comment_row();
 
@@ -315,7 +319,7 @@ class WPCH_Ajax
 
 	// Deletes one of the current user's own messages; a top-level message
 	// takes its replies with it.
-	public function comment_delete(): void
+	public function comment_delete()
 	{
 		list($index, $endpoints, $comments) = $this->require_comment_row();
 
@@ -347,14 +351,14 @@ class WPCH_Ajax
 
 	// Called when a comment popover opens: re-renders the thread as currently
 	// stored (the page it was rendered into may be minutes old).
-	public function comment_fetch(): void
+	public function comment_fetch()
 	{
 		list($index, , $comments) = $this->require_comment_row();
 
 		$this->send_thread($index, $comments);
 	}
 
-	public function delete_endpoint(): void
+	public function delete_endpoint()
 	{
 		if (! current_user_can('manage_options')) {
 			wp_send_json_error(['message' => 'Forbidden'], 403);
@@ -370,7 +374,7 @@ class WPCH_Ajax
 		wp_send_json_success();
 	}
 
-	public function refresh_statuses(): void
+	public function refresh_statuses()
 	{
 		if (! current_user_can('manage_options')) {
 			wp_send_json_error(['message' => 'Forbidden'], 403);

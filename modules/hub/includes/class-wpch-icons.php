@@ -13,7 +13,8 @@ if (! defined('ABSPATH')) {
 class WPCH_Icons
 {
 	/** @var array<string, string> Raw <svg> markup keyed by icon name. */
-	private static array $cache = [];
+	/** @var array */
+	private static $cache = [];
 
 	// Returns the icon's <svg> markup with width/height set to $size, or ''
 	// if no such file exists. Output is trusted markup from the plugin's own

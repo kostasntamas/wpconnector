@@ -11,7 +11,7 @@ if (! defined('ABSPATH')) {
  */
 class WPCE_Rest_Controller
 {
-	public function register_routes(): void
+	public function register_routes()
 	{
 		register_rest_route('wpconnector/v1', '/status', [
 			'methods'             => 'GET',

@@ -9,13 +9,17 @@ if (! defined('ABSPATH')) {
  */
 class WPCH_Admin_Page
 {
-	private WPCH_Endpoints $endpoints;
+	/** @var WPCH_Endpoints */
+	private $endpoints;
 
-	private WPCH_Folders $folders;
+	/** @var WPCH_Folders */
+	private $folders;
 
-	private WPCH_Status_Checker $status_checker;
+	/** @var WPCH_Status_Checker */
+	private $status_checker;
 
-	private ?string $hook_suffix = null;
+	/** @var string|null */
+	private $hook_suffix = null;
 
 	public function __construct(WPCH_Endpoints $endpoints, WPCH_Folders $folders, WPCH_Status_Checker $status_checker)
 	{
@@ -24,7 +28,7 @@ class WPCH_Admin_Page
 		$this->status_checker = $status_checker;
 	}
 
-	public function register_menu(): void
+	public function register_menu()
 	{
 		$this->hook_suffix = add_menu_page(
 			'WP Connector Hub',
@@ -39,7 +43,7 @@ class WPCH_Admin_Page
 		add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
 	}
 
-	public function enqueue_assets(string $hook_suffix): void
+	public function enqueue_assets(string $hook_suffix)
 	{
 		if ($hook_suffix !== $this->hook_suffix) {
 			return;
@@ -112,7 +116,7 @@ class WPCH_Admin_Page
 		);
 	}
 
-	public function dequeue_admin_styles(): void
+	public function dequeue_admin_styles()
 	{
 		global $wp_styles;
 
@@ -126,7 +130,7 @@ class WPCH_Admin_Page
 		}
 	}
 
-	public function maybe_handle_actions(): void
+	public function maybe_handle_actions()
 	{
 		if (isset($_GET['page']) && 'wpconnectorhub' === $_GET['page']) {
 			add_filter('show_admin_bar', '__return_false');
@@ -134,7 +138,7 @@ class WPCH_Admin_Page
 		}
 	}
 
-	private function handle_form_actions(): void
+	private function handle_form_actions()
 	{
 		if (isset($_GET['wpch_delete'])) {
 			$index = (int) $_GET['wpch_delete'];
@@ -181,7 +185,7 @@ class WPCH_Admin_Page
 		}
 	}
 
-	private function export_json(): void
+	private function export_json()
 	{
 		$endpoints = array_map(function ($endpoint) {
 			$endpoint['url'] = WPCH_Endpoints::display_url($endpoint['url']);
@@ -201,7 +205,7 @@ class WPCH_Admin_Page
 	}
 
 	// Returns an error slug on failure, or null on success.
-	private function import_json(): ?string
+	private function import_json()
 	{
 		if (empty($_FILES['import_file']['tmp_name']) || UPLOAD_ERR_OK !== $_FILES['import_file']['error']) {
 			return 'file';
@@ -278,7 +282,7 @@ class WPCH_Admin_Page
 		return null;
 	}
 
-	public function render_color_swatches(string $name, string $suffix, ?string $selected = null): string
+	public function render_color_swatches(string $name, string $suffix, $selected = null): string
 	{
 		$presets = $this->folders->color_presets();
 		if (null === $selected) {
@@ -300,7 +304,7 @@ class WPCH_Admin_Page
 		return $html;
 	}
 
-	public function render_folder_picker_fields(string $suffix, array $folders, string $selected_folder_id = ''): void
+	public function render_folder_picker_fields(string $suffix, array $folders, string $selected_folder_id = '')
 	{
 		$folder_by_id = [];
 		foreach ($folders as $folder) {
@@ -403,7 +407,7 @@ class WPCH_Admin_Page
 
 	// The colored difficulty pill shown next to the domain (main table and
 	// health tabs). Prints nothing for untagged rows or unknown slugs.
-	public function render_tag_badge(string $tag): void
+	public function render_tag_badge(string $tag)
 	{
 		$presets = WPCH_Endpoints::tag_presets();
 		if ('' === $tag || ! isset($presets[$tag])) {
@@ -420,7 +424,7 @@ class WPCH_Admin_Page
 	// button and its <dialog>. Shared by the main table rows and the health-tab
 	// tier rows — $dialog_id must be unique per rendered cell since the dialog
 	// markup lives inline next to the button.
-	public function render_plugins_cell(string $dialog_id, string $row_label, array $status): void
+	public function render_plugins_cell(string $dialog_id, string $row_label, array $status)
 	{
 	?>
 		<td>
@@ -494,7 +498,7 @@ class WPCH_Admin_Page
 	// The Auto Updates <td>: the site's core auto-update policy plus how many
 	// plugins have auto-updates switched on. Endpoints still running a plugin
 	// version that doesn't report these fields render an em dash.
-	public function render_auto_updates_cell(array $status): void
+	public function render_auto_updates_cell(array $status)
 	{
 		$core = $this->status_checker->core_auto_update_status($status);
 	?>
@@ -520,7 +524,7 @@ class WPCH_Admin_Page
 
 	// $status is the endpoint's decoded payload array, or a WP_Error when the
 	// site was unreachable — it can't be type-hinted on PHP 7.4 (no unions).
-	public function render_endpoint_row(int $i, array $endpoint, $status, bool $in_folder, array $folders = [], ?int $position = null, array $domain_counts = []): void
+	public function render_endpoint_row(int $i, array $endpoint, $status, bool $in_folder, array $folders = [], $position = null, array $domain_counts = [])
 	{
 		$is_error   = is_wp_error($status);
 		$domain     = wp_parse_url($endpoint['url'], PHP_URL_HOST);
@@ -654,7 +658,7 @@ class WPCH_Admin_Page
 	// tabs. Everything in here sits in #wpch-health-tabs-swap, which the
 	// Refresh AJAX response replaces wholesale — the main table panel lives
 	// outside the swap so its DOM (dialogs, listeners) survives a refresh.
-	public function render_health_tabs(array $endpoints, array $statuses): void
+	public function render_health_tabs(array $endpoints, array $statuses)
 	{
 		$tiers = [
 			'Healthy'         => '#1a7f37',
@@ -759,7 +763,7 @@ class WPCH_Admin_Page
 	// inline reply composer. Also the payload of the comment AJAX and
 	// heartbeat responses, so the client only ever swaps this container's
 	// innerHTML wholesale.
-	public function render_comments(int $i, array $comments): void
+	public function render_comments(int $i, array $comments)
 	{
 		if (! $comments) {
 			echo '<p class="wpch-comment-empty">No comments yet.</p>';
@@ -816,7 +820,7 @@ class WPCH_Admin_Page
 	// One chat message: avatar, author + relative time, plain text (newlines
 	// preserved via white-space:pre-wrap), delete for own messages and Reply
 	// on top-level ones.
-	private function render_comment_msg(int $i, array $entry, bool $is_top): void
+	private function render_comment_msg(int $i, array $entry, bool $is_top)
 	{
 		$author  = isset($entry['author']) && '' !== $entry['author'] ? $entry['author'] : 'Unknown';
 		$is_mine = (int) $entry['author_id'] === get_current_user_id() && 0 !== (int) $entry['author_id'];
@@ -852,7 +856,7 @@ class WPCH_Admin_Page
 		return strtoupper(mb_substr($name, 0, 2));
 	}
 
-	public function render_settings_page(): void
+	public function render_settings_page()
 	{
 		$endpoints = $this->endpoints->get_all();
 		$folders   = $this->folders->get_all();

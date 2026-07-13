@@ -10,12 +10,12 @@ if (! defined('ABSPATH')) {
  */
 class WPCE_Settings_Page
 {
-	public function register_menu(): void
+	public function register_menu()
 	{
 		add_options_page('WP Connector Endpoint', 'WP Connector Endpoint', 'manage_options', 'wpconnectorendpoint', [$this, 'render']);
 	}
 
-	public function render(): void
+	public function render()
 	{
 		if (isset($_POST['wpce_key']) && check_admin_referer('wpce_save_key')) {
 			update_option('wpce_secret_key', sanitize_text_field($_POST['wpce_key']));

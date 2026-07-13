@@ -61,7 +61,7 @@ class WPCH_Folders
 	// Whitelists raw request input against the palette (the presets are
 	// var(--clr-N) values, which sanitize_hex_color() would reject). Null for
 	// anything else. $color is untyped because request values may be arrays.
-	public function sanitize_color($color): ?string
+	public function sanitize_color($color)
 	{
 		if (is_string($color) && in_array($color, $this->color_presets(), true)) {
 			return $color;
@@ -69,13 +69,13 @@ class WPCH_Folders
 		return null;
 	}
 
-	public function save(array $folders): void
+	public function save(array $folders)
 	{
 		update_option(self::OPTION_NAME, $folders);
 	}
 
 	// $color may be null because sanitize_color() returns null for invalid input.
-	public function create(string $name, ?string $color): string
+	public function create(string $name, $color): string
 	{
 		$presets = $this->color_presets();
 		$folders = $this->get_all();
@@ -91,7 +91,7 @@ class WPCH_Folders
 		return $id;
 	}
 
-	public function update_color(string $folder_id, ?string $color): void
+	public function update_color(string $folder_id, $color)
 	{
 		if (! $color) {
 			return;
@@ -109,7 +109,7 @@ class WPCH_Folders
 		update_option(self::OPTION_NAME, $folders);
 	}
 
-	public function update_details(string $folder_id, string $name, ?string $color): void
+	public function update_details(string $folder_id, string $name, $color)
 	{
 		$folders = $this->get_all();
 		foreach ($folders as &$folder) {
@@ -128,7 +128,7 @@ class WPCH_Folders
 		update_option(self::OPTION_NAME, $folders);
 	}
 
-	public function reorder(array $ordered_ids): void
+	public function reorder(array $ordered_ids)
 	{
 		$folders = $this->get_all();
 		$by_id   = [];
@@ -160,7 +160,7 @@ class WPCH_Folders
 		return is_array($states) ? $states : [];
 	}
 
-	public function set_open_state(string $folder_id, bool $open): void
+	public function set_open_state(string $folder_id, bool $open)
 	{
 		$states             = $this->get_open_states();
 		$states[$folder_id] = $open ? 1 : 0;

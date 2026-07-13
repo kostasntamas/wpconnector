@@ -31,7 +31,7 @@ class WPCH_Endpoints
 	// ['id', 'parent', 'author_id', 'author', 'time', 'text']. 'parent' is ''
 	// for a top-level message or the id of the top-level message it replies to
 	// (replies only nest one level). 'text' is plain text.
-	public static function sanitize_comment_entry($entry): ?array
+	public static function sanitize_comment_entry($entry)
 	{
 		if (! is_array($entry) || ! isset($entry['text']) || ! is_string($entry['text'])) {
 			return null;
@@ -69,7 +69,7 @@ class WPCH_Endpoints
 	// plain text from even older saves) into one plain-text chat entry, or null
 	// when the row has no comment. Used by the get_all() migration and by
 	// JSON imports of old export files.
-	public static function legacy_comment_entry(array $row): ?array
+	public static function legacy_comment_entry(array $row)
 	{
 		$raw = isset($row['comment']) && is_string($row['comment']) ? $row['comment'] : '';
 		if ('' === trim($raw)) {
@@ -169,7 +169,7 @@ class WPCH_Endpoints
 		return $endpoints;
 	}
 
-	public function save(array $endpoints): void
+	public function save(array $endpoints)
 	{
 		update_option(self::OPTION_NAME, $endpoints);
 	}
@@ -207,7 +207,7 @@ class WPCH_Endpoints
 	// table's current DOM order. Rewrites each row's 'order' (1..N) and folder
 	// assignment in place — array keys are left untouched so the row indexes
 	// already rendered on the page stay valid for delete/edit.
-	public function reorder(array $ordered_rows): void
+	public function reorder(array $ordered_rows)
 	{
 		$endpoints   = $this->get_all();
 		$index_by_id = [];
@@ -236,7 +236,7 @@ class WPCH_Endpoints
 	}
 
 	// One-time migration from the old single-textarea storage.
-	public function migrate_legacy(): void
+	public function migrate_legacy()
 	{
 		$legacy = get_option('wpch_endpoints', '');
 		if ('' === $legacy || false !== get_option(self::OPTION_NAME, false)) {

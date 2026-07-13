@@ -19,9 +19,10 @@ class WPCH_Status_Checker
 	// Per-endpoint fetch metadata for the most recent fetch_statuses() call,
 	// keyed like its input array: ['duration' => float|null seconds,
 	// 'cached' => bool, 'fetched_at' => unix time].
-	private array $last_meta = [];
+	/** @var array */
+	private $last_meta = [];
 
-	public function get_meta(int $i): ?array
+	public function get_meta(int $i)
 	{
 		return isset($this->last_meta[$i]) ? $this->last_meta[$i] : null;
 	}
@@ -232,7 +233,7 @@ class WPCH_Status_Checker
 
 	// The Core value of the Auto Updates column. Returns null when the status
 	// payload predates the core_auto_update field (endpoint plugin < 2.1).
-	public function core_auto_update_status(array $status): ?array
+	public function core_auto_update_status(array $status)
 	{
 		if (! isset($status['core_auto_update'])) {
 			return null;
@@ -248,7 +249,7 @@ class WPCH_Status_Checker
 		return ['label' => ucfirst($status['core_auto_update']), 'color' => '#c98a00'];
 	}
 
-	public function site_health(bool $is_error, ?array $php_status = null, ?array $wp_status = null): array
+	public function site_health(bool $is_error, $php_status = null, $wp_status = null): array
 	{
 		if ($is_error) {
 			return ['label' => 'Offline', 'color' => '#b32d2e'];
