@@ -24,7 +24,7 @@
 	/* box-sizing: border-box; */
 	height: 100vh;
 	position: sticky;
-	top: 3rem;
+	top: 0;
 }
 
 .wpch-sidebar a {
@@ -166,7 +166,7 @@ thead th:last-child {
 thead,
 thead th {
 	position: sticky;
-	top: 10px;
+	top: 3rem;
 	background: var(--tab-color, #00325c);
 	text-transform: capitalize;
 	font-size: 1rem;
