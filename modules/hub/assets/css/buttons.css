@@ -1,0 +1,141 @@
+/* buttons */
+button.button.refresh-button,
+button.button.close,
+button.button[command='close'],
+button.button.button-primary {
+	cursor: pointer;
+	border: none;
+	color: white;
+	padding: 0.6em 0.7em;
+	border-radius: 3px;
+	line-height: 1;
+}
+
+.button.button-small {
+	font-size: 0.85rem;
+	font-weight: 400;
+}
+button.button.refresh-button {
+	background: rgb(81, 142, 255);
+}
+button.button.button-primary {
+	background: black;
+}
+button.button.close {
+	background: red;
+	border: 1px solid color-mix(in hsl, red, gray);
+	border-radius: 100vmax;
+	aspect-ratio: 1;
+	padding: 0.2em;
+}
+
+.row-button,
+.comment-btn,
+.edit-button,
+.refresh-row,
+.edit-folder {
+	cursor: pointer;
+	border: none;
+	background: none;
+	text-decoration: underline;
+	padding: 0.2em 0.5em;
+	/* color: contrast-color(var(--style)); */
+}
+
+.comment-btn {
+	display: flex;
+	align-items: center;
+	gap: 0.5em;
+}
+.comment-btn,
+.edit-button,
+.refresh-row,
+.edit-folder {
+	padding: 0 !important;
+	line-height: 1;
+	border: none;
+	background: transparent;
+	color: color-mix(in hsl, var(--style), black);
+}
+
+/* Per-row refresh: spin the icon while its request is in flight. */
+.refresh-row.wpch-refreshing svg {
+	animation: wpch-spin 1s linear infinite;
+}
+@keyframes wpch-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+.edits {
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+	gap: 1em;
+}
+
+.move,
+.drag {
+	margin: 0;
+	padding: 0;
+	cursor: grab;
+	background: transparent;
+	border: none;
+	line-height: 1;
+	svg {
+		pointer-events: none;
+	}
+	svg path {
+		fill: contrast-color(var(--style));
+	}
+}
+
+.drag {
+	position: absolute;
+	translate: 0% -50%;
+}
+
+.move:active,
+.drag:active {
+	cursor: grabbing;
+}
+
+/* Inputs */
+input[type='text'],
+textarea,
+select {
+	border-radius: 3px;
+	padding: 0.3em 1.35em 0.3em 0.5em;
+	border: 1px solid rgb(192, 192, 192);
+}
+select {
+	field-sizing: content;
+	cursor: pointer;
+	@supports not (field-sizing: content) {
+		max-width: 200px;
+		min-width: 200px;
+	}
+}
+.test {
+	color: #2c3e50;
+}
+
+input[data-type='secret-key'] {
+	-webkit-text-security: disc;
+}
+
+/* Links */
+
+a[target='_blank'] {
+	color: color-mix(in hsl, var(--style), black);
+	text-decoration: none;
+	display: flex;
+	align-items: center;
+	gap: 1ch;
+}
+a[target='_blank']::after {
+	font-size: 0.8em;
+	/* margin-left: 1ch; */
+	line-height: 1;
+	content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='.8em' height='.8em' viewBox='0 0 24 24'%3E%3C!-- Icon from Google Material Icons by Material Design Authors - https://github.com/material-icons/material-icons/blob/master/LICENSE --%3E%3Cpath fill='currentColor' d='M19 19H5V5h7V3H3v18h18v-9h-2zM14 3v2h3.59l-9.83 9.83l1.41 1.41L19 6.41V10h2V3z'/%3E%3C/svg%3E");
+}

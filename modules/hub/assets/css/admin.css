@@ -1,0 +1,910 @@
+.wpch-shell {
+	display: grid;
+	grid-template-columns: auto 1fr;
+}
+
+.grid-info {
+	display: grid;
+	grid-template-columns: 1fr 1fr auto;
+	gap: 1.3rem;
+}
+.grid-info.updates {
+	grid-template-columns: 1fr 1fr 1fr auto;
+}
+
+.wpch-sidebar {
+	width: auto;
+	flex-shrink: 0;
+	background: #1d2327;
+	color: #fff;
+	padding: 16px 12px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	gap: 1.5em;
+	height: 100vh;
+	position: sticky;
+	top: 0;
+}
+
+.wpch-sidebar a {
+	color: #72aee6;
+}
+
+.wpch-sidebar a:hover {
+	color: #fff;
+}
+
+.wpch-sidebar-top {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	height: 100%;
+	gap: 1.6em;
+}
+
+.wpch-brand {
+	display: flex;
+	align-items: center;
+	gap: 0.7ch;
+	font-size: 0.9rem;
+	font-weight: 400;
+	line-height: 1.25;
+	text-align: left;
+}
+
+.wpch-brand svg {
+	flex: none;
+	color: #72aee6;
+}
+
+.wpch-brand b {
+	font-weight: 700;
+}
+
+.wpch-side-group {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5em;
+}
+
+.wpch-side-label {
+	font-size: 0.68rem;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.09em;
+	opacity: 0.55;
+}
+
+.wpch-side-btn,
+.wpch-sidebar a.wpch-side-btn {
+	display: flex;
+	align-items: center;
+	gap: 0.8ch;
+	width: 100%;
+	padding: 0.6em 0.7em;
+	font-size: 0.82rem;
+	color: #e2e4e7;
+	text-decoration: none;
+	background: #2c3338;
+	border: 1px solid #3c434a;
+	border-radius: 3px;
+	cursor: pointer;
+	line-height: 1;
+	justify-content: center;
+}
+
+.wpch-side-btn:hover,
+.wpch-sidebar a.wpch-side-btn:hover {
+	background: #3c434a;
+	color: #fff;
+}
+
+.wpch-side-btn svg {
+	flex: none;
+}
+
+.wpch-side-primary,
+.wpch-side-btn.wpch-side-primary {
+	background: #2271b1;
+	border-color: #2271b1;
+	color: #fff;
+	font-weight: 500;
+}
+
+.wpch-side-primary:hover,
+.wpch-side-btn.wpch-side-primary:hover {
+	background: #135e96;
+	border-color: #135e96;
+}
+
+.wpch-side-back {
+	font-size: 0.78rem;
+	text-align: left;
+}
+
+/* Sticky top bar: search bar (opens the Ctrl+K palette) + user chip + logout. */
+#wpch-top {
+	position: sticky;
+	top: 0;
+	z-index: 10;
+	background: #fff;
+	border-bottom: 1px solid #dcdcde;
+}
+
+.wpch-topbar {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 1.5em;
+	min-height: var(--wpch-topbar-h);
+	/* padding: 0 1.4rem; */
+}
+
+.wpch-search-bar {
+	display: flex;
+	align-items: center;
+	gap: 1ch;
+	/* min-width: min(360px, 40vw); */
+	padding: 0.5em 0.9em;
+	font-size: 0.85rem;
+	color: #646970;
+	text-align: left;
+	background: #f6f7f7;
+	border: 1px solid #c3c4c7;
+	border-radius: 100vmax;
+	cursor: pointer;
+	line-height: 1;
+}
+
+.wpch-search-bar:hover {
+	border-color: #8c8f94;
+	background: #fff;
+}
+
+.wpch-search-bar svg {
+	flex: none;
+}
+
+.wpch-search-bar span {
+	flex: 1;
+}
+
+.wpch-topbar-user {
+	display: flex;
+	align-items: center;
+	gap: 1.4em;
+}
+
+.wpch-user-chip {
+	display: flex;
+	align-items: center;
+	gap: 0.8ch;
+}
+
+.wpch-user-avatar {
+	display: flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	font-size: 0.72rem;
+	font-weight: 600;
+	color: #000;
+	background: lightblue;
+	border-radius: 50%;
+}
+
+.wpch-user-name {
+	font-size: 0.85rem;
+	font-weight: 500;
+	color: #1d2327;
+	white-space: nowrap;
+}
+
+.wpch-logout {
+	display: flex;
+	align-items: center;
+	gap: 0.5ch;
+	font-size: 0.85rem;
+	color: black;
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+.wpch-logout:hover {
+	text-decoration: underline;
+}
+
+/* Full-width inputs inside the sidebar's Add Site dialog (buttons.css caps
+   text inputs at 200px otherwise). */
+#wpch-add-dialog input[type='text'],
+#wpch-add-dialog select {
+	width: 100%;
+	max-width: 100%;
+}
+
+.wpch-notice {
+	background: #fff0f0;
+	border-left: 4px solid #b32d2e;
+	padding: 0.6em 1em;
+}
+
+.active {
+	color: #1a7f37;
+}
+
+.total {
+	color: #22a7f2;
+}
+
+.inactive {
+	color: #b32d2e;
+}
+
+.wrapper {
+	inline-size: min(100% - 4rem, 1920px);
+	margin-inline: auto;
+}
+
+.main-content {
+	padding-block: 1.5rem 3rem;
+	min-block-size: 100dvb;
+}
+
+.main-content > *:not(dialog) + *:not(dialog) {
+	margin-top: 1em;
+}
+
+.wpch-folder-count {
+	font-weight: 300;
+	opacity: 0.5;
+	font-size: 0.75em;
+}
+
+.wpch-total-count {
+	font-weight: 400;
+	opacity: 0.7;
+	font-size: 0.7em;
+}
+
+table {
+	min-inline-size: 0;
+	inline-size: 100%;
+	border-collapse: collapse;
+}
+
+tr.dragging {
+	opacity: 0.4;
+}
+
+tr:has(dialog[open]),
+tr:has([popover]:popover-open) {
+	outline: 2px dashed var(--border);
+}
+
+tbody.dragging-folder {
+	opacity: 0.5;
+}
+
+/* While a block is grabbed by its handle (mousedown, before/while dragging),
+only its header shows — hiding the rows keeps reflows cheap, makes the drop
+position visible, and (crucially) means no layout change happens at the
+moment the native drag initiates, which aborted drags of big blocks */
+tbody.drag-collapsed tr:not(.parent-row) {
+	display: none;
+}
+
+/* Don't let the browser's scroll anchoring pick a node inside the table —
+the fold-on-grab above would otherwise yank the scroll position mid-press */
+/* .wpch-status-table,
+.wpch-status-table * {
+	overflow-anchor: none;
+} */
+
+.wpch-fetch-meta {
+	display: block;
+	font-size: 0.7em;
+	opacity: 0.6;
+	white-space: nowrap;
+	cursor: help;
+}
+/* td .move {
+position-anchor: --row;
+right: anchor(right --row);
+top: anchor(center --row);
+} */
+
+.edit-folder {
+	padding: 0.15em 0.4em;
+	font-size: 0.85em;
+	font-weight: 400;
+	position: absolute;
+	position-anchor: --folder;
+	right: calc(anchor(right --folder) + 50px);
+	top: anchor(center --folder);
+	translate: 0 -50%;
+}
+
+thead {
+	border: 1px solid var(--tab-color, #00325c);
+}
+thead th:not(:last-child) {
+	border-right: 1px solid;
+	border-color: white;
+}
+thead th:last-child {
+	border-right: 1px solid;
+	border-color: var(--tab-color, #00325c);
+}
+thead,
+thead th {
+	position: sticky;
+	top: calc(var(--wpch-topbar-h) + 10px);
+	background: var(--tab-color, #00325c);
+	text-transform: capitalize;
+	font-size: 1rem;
+	font-weight: 500;
+	color: white;
+	z-index: 1;
+}
+
+th,
+td {
+	text-align: center;
+	padding: 0 0.55em;
+	font-weight: 400;
+	font-size: small;
+	user-select: text;
+}
+tr th[scope='row'] {
+	border-right: 1px solid color-mix(in hsl, var(--border), white);
+}
+td {
+	&:last-child {
+		anchor-name: --edits;
+		anchor-scope: --edits;
+	}
+	&:not(:last-child) {
+		border-right: 1px solid color-mix(in hsl, var(--border), white);
+	}
+}
+
+th {
+	padding-block: 0.4em;
+}
+td strong {
+	font-weight: 500;
+}
+
+.wpch-dup-badge {
+	display: inline-block;
+	margin-left: 0.4em;
+	padding: 0.05em 0.45em;
+	font-size: 0.75em;
+	font-weight: 500;
+	white-space: nowrap;
+	color: #7a4a00;
+	background: #ffe6a8;
+	border: 1px solid #d99a00;
+	border-radius: 3px;
+	cursor: help;
+}
+
+.wpch-tag {
+	display: inline-block;
+	/* margin-left: 0.4em; */
+	padding: 0.25em 0.7em;
+	font-size: 0.8em;
+	font-weight: 400;
+	white-space: nowrap;
+	color: contrast-color(var(--tag-color));
+	background: var(--tag-color, #666);
+	border-radius: 100vmax;
+	border: 1px solid contrast-color(var(--tag-color));
+}
+
+/* --- Comment chat popover (comments.js positions it next to the row's
+   comment button) ---------------------------------------------------------- */
+
+.wpch-comment-count {
+	padding: 0 0.5em;
+	width: 18px;
+	height: 18px;
+	display: flex;
+	font-size: 0.55rem;
+	font-weight: 600;
+	line-height: 1.6;
+	aspect-ratio: 1;
+	color: #fff;
+	background: #2271b1;
+	border-radius: 100vmax;
+	align-items: center;
+	justify-content: center;
+}
+
+.wpch-comment-popover {
+	container-type: anchored;
+	position-anchor: --edits;
+	width: 420px;
+	position: fixed;
+	max-width: calc(100vw - 16px);
+	padding: 0;
+	overflow: visible;
+	background: #fff;
+	border: none;
+	/* border-radius: 10px 0 10px 10px; */
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+	left: auto;
+	right: anchor(left --edits);
+	top: anchor(center --edits);
+	position-try-fallbacks: --top;
+	/* @container anchored(fallback: --top) {
+		border-radius: 10px 10px 0px 10px;
+	} */
+}
+
+.wpch-comment-popover::after {
+	content: '';
+	position: absolute;
+	background-color: transparent;
+	top: 0px;
+	height: 20px;
+	width: 30px;
+	border-top-left-radius: 10px;
+	box-shadow: white -20px 0px 0px 0px;
+	right: -30px;
+	z-index: -1;
+
+	@container anchored(fallback: --top) {
+		bottom: 0;
+		top: auto;
+		border-top-left-radius: 0px;
+		border-bottom-left-radius: 10px;
+	}
+}
+
+@position-try --top {
+	top: auto;
+	right: anchor(left --edits);
+	bottom: anchor(center --edits);
+}
+
+.wpch-comment-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1em;
+	padding: 15px;
+	border-bottom: 1px solid #e5e5e5;
+}
+
+.wpch-comment-thread {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	max-height: 25vh;
+	padding: 8px;
+	overflow: auto;
+	overscroll-behavior: contain;
+	text-align: left;
+}
+
+.wpch-comment-empty {
+	margin: 0;
+	font-size: 0.85em;
+	color: #777;
+	text-align: center;
+}
+
+.wpch-comment-msg {
+	display: flex;
+	gap: 8px;
+}
+
+.wpch-comment-avatar {
+	display: flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	font-size: 0.7em;
+	font-weight: 600;
+	color: #000;
+	background: lightblue;
+	border-radius: 50%;
+}
+
+.wpch-comment-body {
+	flex: 1;
+	min-width: 0;
+	padding: 6px 10px;
+	background: #f0f0f1;
+	border-radius: 10px;
+}
+
+.wpch-comment-msg.is-mine .wpch-comment-body {
+	background: #e7f0fa;
+}
+
+.wpch-comment-meta {
+	display: flex;
+	gap: 0.7em;
+	align-items: baseline;
+	font-size: 0.78em;
+	color: #50575e;
+}
+
+.wpch-comment-meta strong {
+	color: #1d2327;
+}
+
+.wpch-comment-action {
+	padding: 0;
+	font-size: 1em;
+	color: #2271b1;
+	cursor: pointer;
+	background: none;
+	border: none;
+}
+
+.wpch-comment-delete {
+	margin-left: auto;
+	font-size: 1.15em;
+	line-height: 1;
+	color: #b32d2e;
+}
+
+.wpch-comment-text {
+	font-size: 0.85em;
+	overflow-wrap: anywhere;
+	white-space: pre-wrap;
+	user-select: text;
+}
+
+/* Indented under the parent message; holds the replies and that comment's
+   inline reply composer. Collapses entirely (no flex gap) while everything
+   inside is hidden. */
+.wpch-comment-replies {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-left: 36px;
+}
+
+.wpch-comment-replies:not(:has(> :not([hidden]))) {
+	display: none;
+}
+
+.wpch-reply-composer,
+.wpch-comment-composer {
+	display: flex;
+	gap: 8px;
+	align-items: flex-end;
+}
+
+.wpch-comment-composer {
+	padding: 15px;
+	border-top: 1px solid #e5e5e5;
+}
+
+.wpch-reply-composer textarea,
+.wpch-comment-composer textarea {
+	flex: 1;
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+	padding: 6px 8px;
+	font: inherit;
+	font-size: 0.85em;
+	resize: vertical;
+	border: 1px solid #c3c4c7;
+	border-radius: 10px;
+}
+
+tbody {
+	anchor-scope: --folder;
+	--folder: var(--style);
+	--border: color-mix(in hsl, var(--style), black);
+	--background: color-mix(in hsl, var(--style), #ffffff);
+	--background-even: color-mix(in hsl, var(--style), transparent 80%);
+	border: 1px dashed var(--border);
+
+	&:has(input[type='checkbox']:not(:checked)) tr:not(.parent-row) {
+		display: none;
+	}
+
+	&:has(input[type='checkbox']:checked) .parent-row {
+		border-bottom: 0;
+	}
+}
+
+.parent-row {
+	anchor-name: --folder;
+	color: contrast-color(var(--folder));
+	font-size: 1.125rem;
+	font-weight: bold;
+	border-bottom: 1px dashed var(--border);
+	background: color-mix(in hsl, var(--folder), transparent 25%);
+
+	> td:first-child {
+		padding: 0px;
+
+		.drag {
+			position-anchor: --folder;
+			right: calc(anchor(right --folder) + 5px);
+			top: anchor(center --folder);
+		}
+
+		input {
+			anchor-name: --input;
+			position-anchor: --folder;
+			cursor: pointer;
+			position: absolute;
+			top: anchor(center);
+			right: calc(anchor(left) + 5px);
+			translate: 0 -50%;
+			z-index: 1;
+			appearance: none;
+			padding: 0;
+			font-weight: 400;
+			border: 1px solid var(--border);
+			border-radius: 3px;
+			inline-size: 18px;
+			block-size: 18px;
+			background: var(--background);
+			aspect-ratio: 1;
+
+			&:checked::after {
+				content: '\2212';
+			}
+
+			&:not(:checked)::after {
+				content: '\002B';
+			}
+
+			&::after {
+				color: contrast-color(var(--style));
+				inline-size: auto;
+				inset: 0;
+				position: absolute;
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				line-height: 1;
+				font-size: 0.8em;
+				margin-top: 1px;
+			}
+		}
+
+		label {
+			cursor: pointer;
+			padding: 0.35em;
+			font-size: 1.0125rem;
+			font-weight: 500;
+			inline-size: 98%;
+			display: flex;
+			gap: 1ch;
+			align-items: center;
+
+			svg path {
+				fill: color-mix(in hsl, var(--style), black);
+			}
+		}
+	}
+}
+
+tr:not(.parent-row):nth-child(odd) {
+	background: color-mix(in hsl, var(--style), transparent 97%);
+	&:hover {
+		background-color: color-mix(in hsl, var(--style), transparent 87%);
+	}
+}
+tr:nth-child(even) {
+	background: color-mix(in hsl, var(--style), transparent 90%);
+	&:hover {
+		background-color: color-mix(in hsl, var(--style), transparent 80%);
+	}
+}
+
+tr.child-row:nth-child(even) {
+	background: var(--background-even);
+	&:hover {
+		background-color: color-mix(in hsl, var(--background-even), transparent 80%);
+	}
+}
+
+tr.child-row {
+	border-bottom: 1px solid color-mix(in hsl, var(--border), white);
+	font-size: 0.95rem;
+	background: var(--background);
+	&:hover {
+		background-color: color-mix(in hsl, var(--background), transparent 60%);
+	}
+}
+tr.child-row:last-child {
+	border-bottom: 1px dashed var(--border);
+}
+tr.child-row:last-child {
+	anchor-name: --last-folder-item;
+	anchor-scope: --last-folder-item;
+
+	&::after {
+		position-anchor: --folder;
+		content: '';
+		position: absolute;
+		left: anchor(center --input);
+		top: anchor(bottom --input);
+		right: anchor(left --folder);
+		bottom: anchor(center --last-folder-item);
+		border-left: 1px dashed color-mix(in hsl, var(--folder), black);
+		border-bottom: 1px dashed color-mix(in hsl, var(--folder), black);
+		border-radius: 0 0 0 3px;
+	}
+}
+
+label.wpch-swatch {
+	margin: 0;
+	aspect-ratio: 1;
+	/* max-width: 100%;
+	flex: 1; */
+	width: 20px;
+	height: 20px;
+	border: 1px solid color-mix(in hsl, var(--swatch), black);
+	border-radius: 100vmax;
+	display: grid;
+	place-content: center;
+	cursor: pointer;
+
+	&::before {
+		content: '';
+		width: 40%;
+		height: 40%;
+		width: 12px;
+		height: 12px;
+		aspect-ratio: 1;
+		border-radius: 50vw;
+		transform: scale(0);
+		transition: 120ms transform ease-in-out;
+		box-shadow: inset 1em 1em color-mix(in hsl, var(--swatch), black);
+	}
+	input[type='radio'] {
+		appearance: none;
+		margin: 0;
+	}
+	&:has(input[type='radio']:checked)::before {
+		transform: scale(1);
+	}
+}
+
+.spacing > * + * {
+	margin-top: 1em;
+}
+
+#wpch-health-tabs-swap {
+	display: contents;
+}
+
+.wpch-health-tabs {
+	margin-block-start: 2em;
+	margin-block-end: 2em;
+}
+.filters-tags-wrapper {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-block-end: 0.8em;
+
+	&:not(:has([data-tab='all'].is-active)) .wpch-filters {
+		display: none;
+	}
+}
+
+.wpch-health-tablist {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4em;
+}
+
+.wpch-health-tab {
+	--tab-color: #666;
+	padding: 0.6em 1.1em;
+	font-size: 0.9em;
+	color: var(--tab-color);
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 3px;
+	cursor: pointer;
+	line-height: 1;
+}
+
+.wpch-health-tab.is-active {
+	color: #fff;
+	background: var(--tab-color);
+	border-color: var(--tab-color);
+}
+
+.wpch-health-tab:disabled {
+	color: #8c8f94;
+	background: #f0f0f1;
+	border-color: #dcdcde;
+	cursor: not-allowed;
+	opacity: 0.7;
+}
+
+.wpch-health-count {
+	font-weight: 400;
+	opacity: 0.8;
+}
+
+/* Ctrl+K domain filter */
+
+/* Rows (and emptied folder groups) hidden by the active filter. */
+.wpch-search-miss {
+	display: none !important;
+}
+
+/* Tag / WP version / PHP version select filters above the main table. */
+.wpch-filters {
+	display: flex;
+	align-items: center;
+	gap: 1.5em;
+	justify-content: flex-end;
+
+	.wpch-search-count:empty {
+		display: none;
+	}
+}
+.wpch-filters label {
+	display: flex;
+	align-items: center;
+	gap: 0.8ch;
+	white-space: nowrap;
+	font-size: 0.85em;
+	font-weight: 500;
+	color: #50575e;
+}
+
+.wpch-search-bar kbd,
+.wpch-search kbd {
+	font-family: inherit;
+	font-size: 0.85em;
+	border: 1px solid #c3c4c7;
+	border-radius: 3px;
+	padding: 0.1em 0.4em;
+	background: #f6f7f7;
+}
+
+dialog.wpch-search {
+	position: fixed;
+	top: 0.7rem;
+	left: 50%;
+	translate: -50% 0;
+	margin: 0;
+	padding: 12px 16px;
+	border: 1px solid #c3c4c7;
+	border-radius: 8px;
+	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+	z-index: 100000;
+}
+dialog.wpch-search[open] {
+	display: flex;
+	align-items: center;
+	gap: 1.5ch;
+}
+/* Out-grow the global 200px text-input constraint from buttons.css. */
+dialog.wpch-search input[type='text'] {
+	min-width: 320px;
+	max-width: 340px;
+}
+.wpch-search-count {
+	color: #50575e;
+	white-space: nowrap;
+	font-weight: 500;
+}
+dialog.wpch-search small {
+	color: #8c8f94;
+	white-space: nowrap;
+}
