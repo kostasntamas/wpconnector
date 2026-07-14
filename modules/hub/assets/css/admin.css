@@ -12,6 +12,50 @@
 	grid-template-columns: 1fr 1fr 1fr auto;
 }
 
+/* The sidebar's "All Plugins" dialog: one card per plugin across every site. */
+.wpch-all-plugins-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+	gap: 0.8em;
+	align-items: start;
+	max-height: 70vh;
+	max-height: 70dvb;
+	overflow: auto;
+	padding: 1em;
+}
+
+.wpch-plugin-card {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5em;
+	padding: 0.8em;
+	text-align: start;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+}
+
+.wpch-plugin-sites {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4em;
+}
+
+.wpch-plugin-site {
+	font-size: 0.75rem;
+	padding: 0.15em 0.6em;
+	color: #3c434a;
+	background: #f0f0f1;
+	border: 1px solid #dcdcde;
+	border-radius: 999px;
+	cursor: help;
+}
+
+.wpch-plugin-site.is-inactive {
+	color: #8c8f94;
+	border-style: dashed;
+}
+
 .wpch-sidebar {
 	inline-size: auto;
 	flex-shrink: 0;

@@ -194,7 +194,9 @@ document.addEventListener('click', function (e) {
 	}
 	e.preventDefault();
 
-	if (!window.confirm('Delete this endpoint?')) {
+	var row = link.closest('tr');
+	var label = (row && row.getAttribute('data-domain')) || 'endpoint';
+	if (!window.confirm('Delete this ' + label + '?')) {
 		return;
 	}
 

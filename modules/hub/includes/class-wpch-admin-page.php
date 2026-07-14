@@ -382,6 +382,14 @@ class WPCH_Admin_Page
 		return $positions;
 	}
 
+	// PHP_VERSION as reported by an endpoint can carry a distro build suffix
+	// ('7.0.33-29+ubuntu16.04.1+deb.sury.org+1'); the tables show just the
+	// numeric part and carry the full string as the cell's title.
+	private static function php_short_version(string $version): string
+	{
+		return preg_match('/^\d+(?:\.\d+)*/', $version, $m) ? $m[0] : $version;
+	}
+
 	// Lowercases and strips a leading "www." so www.test.com and test.com
 	// count as the same domain for duplicate detection.
 	private static function domain_key(string $domain): string
@@ -504,6 +512,60 @@ class WPCH_Admin_Page
 	<?php
 	}
 
+	// The sidebar's "All Plugins" <dialog>: every plugin found across all
+	// fetched site statuses, one card per plugin (keyed case-insensitively by
+	// name) listing the sites it's installed on. Offline sites contribute
+	// nothing — their status is a WP_Error with no plugin list.
+	public function render_all_plugins_dialog(array $endpoints, array $statuses)
+	{
+		$plugins = [];
+		foreach ($endpoints as $i => $endpoint) {
+			$status = $statuses[$i];
+			if (is_wp_error($status) || empty($status['plugins'])) {
+				continue;
+			}
+			$domain = wp_parse_url($endpoint['url'], PHP_URL_HOST);
+			$site   = $domain ? $domain : $endpoint['url'];
+			foreach ($status['plugins'] as $plugin) {
+				$key = strtolower($plugin['name']);
+				if (! isset($plugins[$key])) {
+					$plugins[$key] = ['name' => $plugin['name'], 'sites' => []];
+				}
+				$plugins[$key]['sites'][$site] = [
+					'version' => $plugin['version'],
+					'active'  => ! empty($plugin['active']),
+				];
+			}
+		}
+		ksort($plugins);
+	?>
+		<dialog id="wpch-plugins-dialog" style="min-width:min(900px, 90vw);max-width:90vw;">
+			<div style="padding:16px;">
+				<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+					<strong>All Plugins <span class="wpch-total-count"><?php echo count($plugins); ?> total</span></strong>
+					<button type="button" commandfor="wpch-plugins-dialog" command="close" class="button close"><?php echo WPCH_Icons::get('close', 18); ?></button>
+				</div>
+				<?php if (! $plugins) : ?>
+					<p style="color:#666;">No plugin data yet &mdash; statuses haven't been fetched, or every site is offline.</p>
+				<?php else : ?>
+					<div class="wpch-all-plugins-grid">
+						<?php foreach ($plugins as $plugin) : ?>
+							<div class="wpch-plugin-card">
+								<strong><?php echo esc_html($plugin['name']); ?></strong>
+								<div class="wpch-plugin-sites">
+									<?php foreach ($plugin['sites'] as $site => $info) : ?>
+										<span class="wpch-plugin-site<?php echo $info['active'] ? '' : ' is-inactive'; ?>" title="<?php echo esc_attr('v' . $info['version'] . ($info['active'] ? ' (active)' : ' (inactive)')); ?>"><?php echo esc_html($site); ?></span>
+									<?php endforeach; ?>
+								</div>
+							</div>
+						<?php endforeach; ?>
+					</div>
+				<?php endif; ?>
+			</div>
+		</dialog>
+	<?php
+	}
+
 	// The Auto Updates <td>: the site's core auto-update policy plus how many
 	// plugins have auto-updates switched on. Endpoints still running a plugin
 	// version that doesn't report these fields render an em dash.
@@ -538,6 +600,7 @@ class WPCH_Admin_Page
 		$is_error   = is_wp_error($status);
 		$domain     = wp_parse_url($endpoint['url'], PHP_URL_HOST);
 		$php_status = $is_error ? null : $this->status_checker->php_status($status['php_version']);
+		$php_short  = $is_error ? '' : self::php_short_version($status['php_version']);
 		$wp_status  = $is_error ? null : $this->status_checker->wp_status($status);
 		$health     = $this->status_checker->site_health($is_error, $php_status, $wp_status);
 		$folder_id  = isset($endpoint['folder_id']) ? $endpoint['folder_id'] : '';
@@ -562,7 +625,7 @@ class WPCH_Admin_Page
 			}
 		}
 	?>
-		<tr id="wpch-row-<?php echo esc_attr($i); ?>" data-id="<?php echo esc_attr(isset($endpoint['id']) ? $endpoint['id'] : ''); ?>" data-domain="<?php echo esc_attr($row_label); ?>" data-tag="<?php echo esc_attr($tag); ?>" data-wp="<?php echo esc_attr($is_error ? '' : $status['wp_version']); ?>" data-php="<?php echo esc_attr($is_error ? '' : $status['php_version']); ?>" <?php /* echo $in_folder ? ' class="child-row"' : ''; */ ?> class="child-row" draggable="true">
+		<tr id="wpch-row-<?php echo esc_attr($i); ?>" data-id="<?php echo esc_attr(isset($endpoint['id']) ? $endpoint['id'] : ''); ?>" data-domain="<?php echo esc_attr($row_label); ?>" data-tag="<?php echo esc_attr($tag); ?>" data-wp="<?php echo esc_attr($is_error ? '' : $status['wp_version']); ?>" data-php="<?php echo esc_attr($php_short); ?>" <?php /* echo $in_folder ? ' class="child-row"' : ''; */ ?> class="child-row" draggable="true">
 			<th scope="row"><?php echo (int) $position; ?></th>
 			<td><a href="<?php echo esc_url(WPCH_Endpoints::login_url_for($endpoint)); ?>" target="_blank" style="display: flex;align-items: center; gap: 1ch;">Login</a></td>
 			<td style="text-align: left">
@@ -581,91 +644,90 @@ class WPCH_Admin_Page
 					<small class="wpch-fetch-meta" style="display:inline-flex; margin-left: 1ch;" title="How long this site's status check took. 'cached' means it's shown from the last check instead of a live request — use Refresh for a live pull."><?php echo esc_html(implode(' · ', $meta_bits)); ?></small>
 				<?php endif; ?>
 			</td>
-			<?php /* <td><input type="text" data-type="secret-key" name="endpoints[<?php echo esc_attr($i); ?>][key]" value="<?php echo esc_attr($endpoint['key']); ?>"></td> */ ?>
 			<?php if ($is_error) : ?>
 				<td colspan="5" style="color:#b32d2e;">Error: <?php echo esc_html($status->get_error_message()); ?></td>
 			<?php else : ?>
 				<td>
-					<div style="display: flex;align-items: center;text-wrap: nowrap;gap: 1ch;"><?php echo esc_html($status['wp_version']); ?> <span style="color:<?php echo esc_attr($wp_status['color']); ?>;" <?php if (! empty($status['wp_update_available']) && ! empty($status['wp_latest_version'])) : ?>title="<?php echo esc_attr('Latest: ' . $status['wp_latest_version']); ?>" <?php endif; ?>>(<?php echo esc_html($wp_status['label']); ?>)</span></div>
+					<div style="display: flex;align-items: center;text-wrap: nowrap;gap: 1ch;justify-content: center;"><?php echo esc_html($status['wp_version']); ?> <span style="color:<?php echo esc_attr($wp_status['color']); ?>;" <?php if (! empty($status['wp_update_available']) && ! empty($status['wp_latest_version'])) : ?>title="<?php echo esc_attr('Latest: ' . $status['wp_latest_version']); ?>" <?php endif; ?>>(<?php echo esc_html($wp_status['label']); ?>)</span></div>
 				</td>
-				<td><?php echo esc_html($status['php_version']); ?> <span style="color:<?php echo esc_attr($php_status['color']); ?>;">(<?php echo esc_html($php_status['label']); ?>)</span></td>
-				<?php $this->render_plugins_cell('wpch-plugins-' . $i, $row_label, $status); ?>
-				<?php $this->render_auto_updates_cell($status); ?>
-				<td><?php echo esc_html($status['themes_installed']); ?></td>
-			<?php endif; ?>
-			<td>
-				<div class="edits">
-					<button type="button" class="button edit-button" title="Edit row" command="show-modal" commandfor="wpch-edit-dialog-<?php echo esc_attr($i); ?>">
-						<?php echo WPCH_Icons::get('edit', 20); ?>
-					</button>
-					<button type="button" class="button refresh-row" title="Refresh this site only" data-index="<?php echo (int) $i; ?>">
-						<?php echo WPCH_Icons::get('refresh', 20); ?>
-					</button>
-					<button type="button" title="Add Comments" class="button comment-btn" onclick="wpchOpenComment(<?php echo (int) $i; ?>)"><?php echo $comment_icon; ?><?php if ($comments) : ?><span class="wpch-comment-count"><?php echo count($comments); ?></span><?php endif; ?></button>
-					<a title="Delete row" href="<?php echo esc_url(wp_nonce_url(add_query_arg('wpch_delete', $i), 'wpch_delete_' . $i)); ?>" class="wpch-delete-link" data-index="<?php echo esc_attr($i); ?>" data-folder-id="<?php echo esc_attr($folder_id); ?>" onclick="return confirm('Delete this endpoint?');" style="color:#b32d2e;"><?php echo WPCH_Icons::get('trash', 20); ?></a>
-					<button title="Move row" type="button" class="move">
-						<?php echo WPCH_Icons::get('move', 20); ?>
-					</button>
-				</div>
+				<td<?php if ($php_short !== $status['php_version']) : ?> title="<?php echo esc_attr($status['php_version']); ?>" <?php endif; ?>><?php echo esc_html($php_short); ?> <span style="color:<?php echo esc_attr($php_status['color']); ?>;">(<?php echo esc_html($php_status['label']); ?>)</span></td>
+					<?php $this->render_plugins_cell('wpch-plugins-' . $i, $row_label, $status); ?>
+					<?php $this->render_auto_updates_cell($status); ?>
+					<td><?php echo esc_html($status['themes_installed']); ?></td>
+				<?php endif; ?>
+				<td>
+					<div class="edits">
+						<button type="button" class="button edit-button" title="Edit row" command="show-modal" commandfor="wpch-edit-dialog-<?php echo esc_attr($i); ?>">
+							<?php echo WPCH_Icons::get('edit', 20); ?>
+						</button>
+						<button type="button" class="button refresh-row" title="Refresh this site only" data-index="<?php echo (int) $i; ?>">
+							<?php echo WPCH_Icons::get('refresh', 20); ?>
+						</button>
+						<button type="button" title="Add Comments" class="button comment-btn" onclick="wpchOpenComment(<?php echo (int) $i; ?>)"><?php echo $comment_icon; ?><?php if ($comments) : ?><span class="wpch-comment-count"><?php echo count($comments); ?></span><?php endif; ?></button>
+						<a title="Delete row" href="<?php echo esc_url(wp_nonce_url(add_query_arg('wpch_delete', $i), 'wpch_delete_' . $i)); ?>" class="wpch-delete-link" data-index="<?php echo esc_attr($i); ?>" data-folder-id="<?php echo esc_attr($folder_id); ?>" style="color:#b32d2e;"><?php echo WPCH_Icons::get('trash', 20); ?></a>
+						<button title="Move row" type="button" class="move">
+							<?php echo WPCH_Icons::get('move', 20); ?>
+						</button>
+					</div>
 
-				<dialog id="wpch-edit-dialog-<?php echo esc_attr($i); ?>" style="min-width:340px;max-width:90vw;">
-					<div style="padding:16px;">
-						<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-							<strong>Edit <?php echo esc_html($row_label); ?></strong>
-							<button type="button" commandfor="wpch-edit-dialog-<?php echo esc_attr($i); ?>" command="close" class="button close"><?php echo WPCH_Icons::get('close', 18); ?></button>
-						</div>
-						<div style="display:flex;flex-direction:column;gap:10px;">
-							<label style="text-align: start;display:flex;flex-direction:column;gap:4px;">
-								Site URL
-								<input type="text" id="wpch-edit-url-<?php echo esc_attr($i); ?>" value="<?php echo esc_attr(WPCH_Endpoints::display_url($endpoint['url'])); ?>" style="max-width:100%;width:100%;">
-							</label>
-							<label style="text-align: start;display:flex;flex-direction:column;gap:4px;">
-								Secret key
-								<input type="text" data-type="secret-key" autocomplete="off" id="wpch-edit-key-<?php echo esc_attr($i); ?>" value="<?php echo esc_attr($endpoint['key']); ?>" style="max-width:100%;width:100%;">
-							</label>
-							<label style="text-align: start;display:flex;flex-direction:column;gap:4px;" title="Where this row's Login link points. Full URL or a path like /wp-admin/ — leave empty for the default login URL.">
-								Login URL <small style="font-weight:400;color:#666;">(empty = default)</small>
-								<input type="text" id="wpch-edit-login-<?php echo esc_attr($i); ?>" value="<?php echo esc_attr(isset($endpoint['login_url']) ? $endpoint['login_url'] : ''); ?>" placeholder="<?php echo esc_attr(WPCH_Endpoints::login_url($endpoint['url'])); ?>" style="max-width:100%;width:100%;">
-							</label>
-							<label style="text-align: start;display:flex;flex-direction:column;gap:4px;">
-								Tag
-								<select id="wpch-edit-tag-<?php echo esc_attr($i); ?>" style="max-width:100%;width:100%;">
-									<option value="">No tag</option>
-									<?php foreach (WPCH_Endpoints::tag_presets() as $slug => $preset) : ?>
-										<option value="<?php echo esc_attr($slug); ?>" <?php selected($tag, $slug); ?>><?php echo esc_html($preset['label']); ?></option>
-									<?php endforeach; ?>
-								</select>
-							</label>
-							<div class="spacing" style="display: flex;flex-direction: column;align-items: flex-start;">
-								<?php $this->render_folder_picker_fields('edit' . $i, $folders, $folder_id); ?>
+					<dialog id="wpch-edit-dialog-<?php echo esc_attr($i); ?>" style="min-width:340px;max-width:90vw;">
+						<div style="padding:16px;">
+							<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+								<strong>Edit <?php echo esc_html($row_label); ?></strong>
+								<button type="button" commandfor="wpch-edit-dialog-<?php echo esc_attr($i); ?>" command="close" class="button close"><?php echo WPCH_Icons::get('close', 18); ?></button>
 							</div>
-							<button type="button" class="button button-primary" style="margin-top: 1em;" onclick="wpchSaveEndpointEdit(<?php echo (int) $i; ?>)">Save</button>
+							<div style="display:flex;flex-direction:column;gap:10px;">
+								<label style="text-align: start;display:flex;flex-direction:column;gap:4px;">
+									Site URL
+									<input type="text" id="wpch-edit-url-<?php echo esc_attr($i); ?>" value="<?php echo esc_attr(WPCH_Endpoints::display_url($endpoint['url'])); ?>" style="max-width:100%;width:100%;">
+								</label>
+								<label style="text-align: start;display:flex;flex-direction:column;gap:4px;">
+									Secret key
+									<input type="text" data-type="secret-key" autocomplete="off" id="wpch-edit-key-<?php echo esc_attr($i); ?>" value="<?php echo esc_attr($endpoint['key']); ?>" style="max-width:100%;width:100%;">
+								</label>
+								<label style="text-align: start;display:flex;flex-direction:column;gap:4px;" title="Where this row's Login link points. Full URL or a path like /wp-admin/ — leave empty for the default login URL.">
+									Login URL <small style="font-weight:400;color:#666;">(empty = default)</small>
+									<input type="text" id="wpch-edit-login-<?php echo esc_attr($i); ?>" value="<?php echo esc_attr(isset($endpoint['login_url']) ? $endpoint['login_url'] : ''); ?>" placeholder="<?php echo esc_attr(WPCH_Endpoints::login_url($endpoint['url'])); ?>" style="max-width:100%;width:100%;">
+								</label>
+								<label style="text-align: start;display:flex;flex-direction:column;gap:4px;">
+									Tag
+									<select id="wpch-edit-tag-<?php echo esc_attr($i); ?>" style="max-width:100%;width:100%;">
+										<option value="">No tag</option>
+										<?php foreach (WPCH_Endpoints::tag_presets() as $slug => $preset) : ?>
+											<option value="<?php echo esc_attr($slug); ?>" <?php selected($tag, $slug); ?>><?php echo esc_html($preset['label']); ?></option>
+										<?php endforeach; ?>
+									</select>
+								</label>
+								<div class="spacing" style="display: flex;flex-direction: column;align-items: flex-start;">
+									<?php $this->render_folder_picker_fields('edit' . $i, $folders, $folder_id); ?>
+								</div>
+								<button type="button" class="button button-primary" style="margin-top: 1em;" onclick="wpchSaveEndpointEdit(<?php echo (int) $i; ?>)">Save</button>
+							</div>
+						</div>
+					</dialog>
+
+					<?php
+					// Chat popover, anchored next to the row's comment button by
+					// comments.js (which also fetches the fresh thread on open and
+					// live-refreshes it over Heartbeat while open). popover="auto"
+					// = light dismiss; an unsent draft survives because hiding a
+					// popover keeps its DOM, and the composer sits outside the
+					// thread container that refreshes swap.
+					?>
+					<div class="wpch-comment-popover" popover id="wpch-comment-popover-<?php echo esc_attr($i); ?>">
+						<div class="wpch-comment-head">
+							<strong>Comments &mdash; <?php echo esc_html($row_label); ?></strong>
+							<button type="button" class="button close" popovertarget="wpch-comment-popover-<?php echo esc_attr($i); ?>" popovertargetaction="hide"><?php echo WPCH_Icons::get('close', 16); ?></button>
+						</div>
+						<div class="wpch-comment-thread" id="wpch-comment-thread-<?php echo esc_attr($i); ?>" data-rev="<?php echo esc_attr(self::comments_rev($comments)); ?>">
+							<?php $this->render_comments($i, $comments); ?>
+						</div>
+						<div class="wpch-comment-composer">
+							<textarea id="wpch-comment-input-<?php echo esc_attr($i); ?>" rows="2" placeholder="Write a comment&hellip; (Enter sends, Shift+Enter for a new line)" onkeydown="wpchComposerKeydown(event, <?php echo (int) $i; ?>, '')"></textarea>
+							<button type="button" class="button button-primary" onclick="wpchSendComment(<?php echo (int) $i; ?>, '')">Send</button>
 						</div>
 					</div>
-				</dialog>
-
-				<?php
-				// Chat popover, anchored next to the row's comment button by
-				// comments.js (which also fetches the fresh thread on open and
-				// live-refreshes it over Heartbeat while open). popover="auto"
-				// = light dismiss; an unsent draft survives because hiding a
-				// popover keeps its DOM, and the composer sits outside the
-				// thread container that refreshes swap.
-				?>
-				<div class="wpch-comment-popover" popover id="wpch-comment-popover-<?php echo esc_attr($i); ?>">
-					<div class="wpch-comment-head">
-						<strong>Comments &mdash; <?php echo esc_html($row_label); ?></strong>
-						<button type="button" class="button close" popovertarget="wpch-comment-popover-<?php echo esc_attr($i); ?>" popovertargetaction="hide"><?php echo WPCH_Icons::get('close', 16); ?></button>
-					</div>
-					<div class="wpch-comment-thread" id="wpch-comment-thread-<?php echo esc_attr($i); ?>" data-rev="<?php echo esc_attr(self::comments_rev($comments)); ?>">
-						<?php $this->render_comments($i, $comments); ?>
-					</div>
-					<div class="wpch-comment-composer">
-						<textarea id="wpch-comment-input-<?php echo esc_attr($i); ?>" rows="2" placeholder="Write a comment&hellip; (Enter sends, Shift+Enter for a new line)" onkeydown="wpchComposerKeydown(event, <?php echo (int) $i; ?>, '')"></textarea>
-						<button type="button" class="button button-primary" onclick="wpchSendComment(<?php echo (int) $i; ?>, '')">Send</button>
-					</div>
-				</div>
-			</td>
+				</td>
 		</tr>
 	<?php
 	}
@@ -703,7 +765,7 @@ class WPCH_Admin_Page
 				'tag'    => isset($endpoint['tag']) ? $endpoint['tag'] : '',
 				'error'  => $is_error ? $status->get_error_message() : '',
 				'wp'     => $is_error ? null : ['version' => $status['wp_version'], 'tier' => $wp_status],
-				'php'    => $is_error ? null : ['version' => $status['php_version'], 'tier' => $php_status],
+				'php'    => $is_error ? null : ['version' => $status['php_version'], 'short' => self::php_short_version($status['php_version']), 'tier' => $php_status],
 				// The whole status payload, for the tier row's Plugins cell
 				// (counts + View Plugins dialog).
 				'status' => $is_error ? null : $status,
@@ -776,18 +838,25 @@ class WPCH_Admin_Page
 						</thead>
 						<tbody style="--style:<?php echo esc_attr($tiers[$label]); ?>;">
 							<?php foreach ($rows as $n => $row) : ?>
-								<tr>
+								<tr data-domain="<?php echo esc_attr($row['domain']); ?>" data-tag="<?php echo esc_attr($row['tag']); ?>" data-wp="<?php echo esc_attr($row['wp'] ? $row['wp']['version'] : ''); ?>" data-php="<?php echo esc_attr($row['php'] ? $row['php']['short'] : ''); ?>">
 									<th scope="row"><?php echo (int) $n + 1; ?></th>
-									<td><a href="<?php echo esc_url($row['login']); ?>" class="login" target="_blank">Login</a></td>
-									<td style="text-align: left"><strong><a target="_blank" href="<?php echo esc_url($row['url']); ?>"><?php echo esc_html($row['domain']); ?></a></strong><?php $this->render_tag_badge($row['tag']); ?></td>
+									<td><a href="<?php echo esc_url($row['login']); ?>" class="login" target="_blank" style="display: flex;align-items: center; gap: 1ch;">Login</a></td>
+									<td style="text-align: left">
+										<div style="display: flex;align-items: center;justify-content: space-between;gap:.4em;">
+											<strong><a target="_blank" class="domain" style="display: flex; align-items: center; gap: 1ch;" href="<?php echo esc_url($row['url']); ?>"><?php echo esc_html($row['domain']); ?></a></strong>
+											<?php $this->render_tag_badge($row['tag']); ?>
+										</div>
+									</td>
 									<?php if ('Offline' === $label) : ?>
 										<td style="text-align: left"><?php echo esc_html($row['error']); ?></td>
 									<?php else : ?>
-										<td><?php echo esc_html($row['wp']['version']); ?> <span style="color:<?php echo esc_attr($row['wp']['tier']['color']); ?>;" <?php if (! empty($row['status']['wp_update_available']) && ! empty($row['status']['wp_latest_version'])) : ?>title="<?php echo esc_attr('Latest: ' . $row['status']['wp_latest_version']); ?>" <?php endif; ?>>(<?php echo esc_html($row['wp']['tier']['label']); ?>)</span></td>
-										<td><?php echo esc_html($row['php']['version']); ?> <span style="color:<?php echo esc_attr($row['php']['tier']['color']); ?>;">(<?php echo esc_html($row['php']['tier']['label']); ?>)</span></td>
-										<?php $this->render_plugins_cell('wpch-health-plugins-' . sanitize_title($label) . '-' . $n, $row['domain'], $row['status']); ?>
-										<?php $this->render_auto_updates_cell($row['status']); ?>
-									<?php endif; ?>
+										<td>
+											<div style="display: flex;align-items: center;text-wrap: nowrap;gap: 1ch;justify-content: center;"><?php echo esc_html($row['wp']['version']); ?> <span style="color:<?php echo esc_attr($row['wp']['tier']['color']); ?>;" <?php if (! empty($row['status']['wp_update_available']) && ! empty($row['status']['wp_latest_version'])) : ?>title="<?php echo esc_attr('Latest: ' . $row['status']['wp_latest_version']); ?>" <?php endif; ?>>(<?php echo esc_html($row['wp']['tier']['label']); ?>)</span></div>
+										</td>
+										<td<?php if ($row['php']['short'] !== $row['php']['version']) : ?> title="<?php echo esc_attr($row['php']['version']); ?>" <?php endif; ?>><?php echo esc_html($row['php']['short']); ?> <span style="color:<?php echo esc_attr($row['php']['tier']['color']); ?>;">(<?php echo esc_html($row['php']['tier']['label']); ?>)</span></td>
+											<?php $this->render_plugins_cell('wpch-health-plugins-' . sanitize_title($label) . '-' . $n, $row['domain'], $row['status']); ?>
+											<?php $this->render_auto_updates_cell($row['status']); ?>
+										<?php endif; ?>
 								</tr>
 							<?php endforeach; ?>
 						</tbody>
@@ -929,6 +998,12 @@ class WPCH_Admin_Page
 						<?php echo WPCH_Icons::get('plus', 18); ?> Add Site
 					</button>
 					<div class="wpch-side-group">
+						<span class="wpch-side-label">Overview</span>
+						<button type="button" class="wpch-side-btn" command="show-modal" commandfor="wpch-plugins-dialog">
+							<?php echo WPCH_Icons::get('plugin', 18); ?> All Plugins
+						</button>
+					</div>
+					<div class="wpch-side-group">
 						<span class="wpch-side-label">Backup</span>
 						<a class="wpch-side-btn" href="<?php echo esc_url(wp_nonce_url(add_query_arg('wpch_export', '1'), 'wpch_export')); ?>">
 							<?php echo WPCH_Icons::get('download', 18); ?> Export JSON
@@ -984,6 +1059,8 @@ class WPCH_Admin_Page
 						</form>
 					</div>
 				</dialog>
+
+				<?php $this->render_all_plugins_dialog($endpoints, $statuses); ?>
 			</div>
 			<div class="wpch-main">
 				<?php
