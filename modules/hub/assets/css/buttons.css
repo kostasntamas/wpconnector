@@ -7,7 +7,7 @@ button.button.button-primary {
 	border: none;
 	color: white;
 	padding: 0.6em 0.7em;
-	border-radius: 3px;
+	border-radius: var(--radius-s);
 	line-height: 1;
 }
 
@@ -106,7 +106,7 @@ button.button.close {
 input[type='text'],
 textarea,
 select {
-	border-radius: 3px;
+	border-radius: var(--radius-s);
 	padding: 0.3em 1.35em 0.3em 0.5em;
 	border: 1px solid rgb(192, 192, 192);
 }

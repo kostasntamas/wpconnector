@@ -836,7 +836,7 @@ class WPCH_Admin_Page
 								<?php else : ?>
 									<th scope="col">WP Version</th>
 									<th scope="col">PHP Version</th>
-									<th scope="col">Plugins <em style="text-wrap: nowrap;font-size: .7em;">( total / active / inactive )</em></th>
+									<th scope="col">Plugins <em style="text-wrap: nowrap;font-size: .65em;">( total / active / inactive )</em></th>
 									<th scope="col">Auto Updates</th>
 								<?php endif; ?>
 							</tr>
@@ -1140,7 +1140,7 @@ class WPCH_Admin_Page
 											<th scope="col" style="width: 270px;">Site Health</th>
 											<th scope="col" style="width: 140px;">WP Version</th>
 											<th scope="col" style="width: 110px;">PHP Version</th>
-											<th scope="col" style="width: 235px;">Plugins <em style="font-size: .8em">( total / active / inactive )</em></th>
+											<th scope="col" style="width: 235px;">Plugins <em style="font-size: .65em">( total / active / inactive )</em></th>
 											<th scope="col" style="width: 140px;">Auto Updates</th>
 											<th scope="col" style="width: 90px;">Themes</th>
 											<th scope="col" style="width: 220px;">Settings</th>

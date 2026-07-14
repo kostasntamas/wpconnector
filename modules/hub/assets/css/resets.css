@@ -14,6 +14,8 @@
 	--clr-7: #d1cfff;
 
 	--wpch-topbar-h: 56px;
+
+	--radius-s: 3px;
 }
 
 html {
@@ -50,16 +52,6 @@ html {
 	display: none !important;
 }
 
-/* html.wp-toolbar {
-	padding-top: 0 !important;
-} */
-
-/* #wpcontent,
-#wpfooter {
-	padding: 0;
-	margin-left: 0 !important;
-} */
-
 #wpbody-content {
 	padding-bottom: 0 !important;
 	background-color: white;
@@ -77,7 +69,7 @@ dialog {
 	border: none;
 	padding: 0;
 	margin: auto;
-	border-radius: 3px;
+	border-radius: var(--radius-s);
 	box-shadow:
 		rgba(67, 71, 85, 0.27) 0px 0px 0.25em,
 		rgba(90, 125, 188, 0.05) 0px 0.25em 1em;
