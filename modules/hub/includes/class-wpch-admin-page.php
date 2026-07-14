@@ -1052,16 +1052,16 @@ class WPCH_Admin_Page
 								<table class="wpch-status-table" id="wpch-status-table">
 									<thead>
 										<tr>
-											<th scope="col">#</th>
-											<th scope="col">Login</th>
-											<th scope="col">Domain</th>
-											<th scope="col">Site Health</th>
-											<th scope="col">WP Version</th>
-											<th scope="col">PHP Version</th>
-											<th scope="col">Plugins <small>( total / active / inactive )</small></th>
-											<th scope="col">Auto Updates</th>
-											<th scope="col">Themes</th>
-											<th scope="col">Settings</th>
+											<th scope="col" style="width: 45px;">#</th>
+											<th scope="col" style="width: 76px;">Login</th>
+											<th scope="col" style="width: 350px;">Domain</th>
+											<th scope="col" style="width: 270px;">Site Health</th>
+											<th scope="col" style="width: 140px;">WP Version</th>
+											<th scope="col" style="width: 110px;">PHP Version</th>
+											<th scope="col" style="width: 235px;">Plugins <em style="font-size: .8em">( total / active / inactive )</em></th>
+											<th scope="col" style="width: 140px;">Auto Updates</th>
+											<th scope="col" style="width: 90px;">Themes</th>
+											<th scope="col" style="width: 220px;">Settings</th>
 										</tr>
 									</thead>
 									<?php foreach ($sections as $section) : ?>

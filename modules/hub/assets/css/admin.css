@@ -13,7 +13,7 @@
 }
 
 .wpch-sidebar {
-	width: auto;
+	inline-size: auto;
 	flex-shrink: 0;
 	background: #1d2327;
 	color: #fff;
@@ -22,7 +22,7 @@
 	flex-direction: column;
 	justify-content: space-between;
 	gap: 1.5em;
-	height: 100vh;
+	block-size: 100vh;
 	position: sticky;
 	top: 0;
 }
@@ -39,7 +39,7 @@
 	display: flex;
 	flex-direction: column;
 	justify-content: space-between;
-	height: 100%;
+	block-size: 100%;
 	gap: 1.6em;
 }
 
@@ -49,7 +49,7 @@
 	gap: 0.7ch;
 	font-size: 0.9rem;
 	font-weight: 400;
-	line-height: 1.25;
+	line-height: 1;
 	text-align: left;
 }
 
@@ -81,7 +81,7 @@
 	display: flex;
 	align-items: center;
 	gap: 0.8ch;
-	width: 100%;
+	inline-size: 100%;
 	padding: 0.6em 0.7em;
 	font-size: 0.82rem;
 	color: #e2e4e7;
@@ -137,7 +137,7 @@
 	align-items: center;
 	justify-content: flex-end;
 	gap: 1.5em;
-	min-height: var(--wpch-topbar-h);
+	min-block-size: var(--wpch-topbar-h);
 	/* padding: 0 1.4rem; */
 }
 
@@ -145,7 +145,7 @@
 	display: flex;
 	align-items: center;
 	gap: 1ch;
-	/* min-width: min(360px, 40vw); */
+	/* min-inline-size: min(360px, 40vw); */
 	padding: 0.5em 0.9em;
 	font-size: 0.85rem;
 	color: #646970;
@@ -187,8 +187,8 @@
 	flex: none;
 	align-items: center;
 	justify-content: center;
-	width: 32px;
-	height: 32px;
+	inline-size: 32px;
+	block-size: 32px;
 	font-size: 0.72rem;
 	font-weight: 600;
 	color: #000;
@@ -221,8 +221,8 @@
    text inputs at 200px otherwise). */
 #wpch-add-dialog input[type='text'],
 #wpch-add-dialog select {
-	width: 100%;
-	max-width: 100%;
+	inline-size: 100%;
+	max-inline-size: 100%;
 }
 
 .wpch-notice {
@@ -273,6 +273,7 @@ table {
 	min-inline-size: 0;
 	inline-size: 100%;
 	border-collapse: collapse;
+	table-layout: auto;
 }
 
 tr.dragging {
@@ -338,13 +339,15 @@ thead th:last-child {
 	border-right: 1px solid;
 	border-color: var(--tab-color, #00325c);
 }
-thead,
 thead th {
+	font-size: 1rem;
+	text-wrap: nowrap;
+}
+thead {
 	position: sticky;
 	top: calc(var(--wpch-topbar-h) + 10px);
 	background: var(--tab-color, #00325c);
 	text-transform: capitalize;
-	font-size: 1rem;
 	font-weight: 500;
 	color: white;
 	z-index: 1;
@@ -394,15 +397,14 @@ td strong {
 
 .wpch-tag {
 	display: inline-block;
-	/* margin-left: 0.4em; */
-	padding: 0.25em 0.7em;
+	padding: 0.35em 0.6em 0.3em 0.6em;
 	font-size: 0.8em;
 	font-weight: 400;
 	white-space: nowrap;
 	color: contrast-color(var(--tag-color));
 	background: var(--tag-color, #666);
 	border-radius: 100vmax;
-	border: 1px solid contrast-color(var(--tag-color));
+	border: 2px solid color-mix(in hsl, var(--tag-color), #979797);
 }
 
 /* --- Comment chat popover (comments.js positions it next to the row's
@@ -410,8 +412,8 @@ td strong {
 
 .wpch-comment-count {
 	padding: 0 0.5em;
-	width: 18px;
-	height: 18px;
+	inline-size: 18px;
+	block-size: 18px;
 	display: flex;
 	font-size: 0.55rem;
 	font-weight: 600;
@@ -427,9 +429,9 @@ td strong {
 .wpch-comment-popover {
 	container-type: anchored;
 	position-anchor: --edits;
-	width: 420px;
+	inline-size: 420px;
 	position: fixed;
-	max-width: calc(100vw - 16px);
+	max-inline-size: calc(100vw - 16px);
 	padding: 0;
 	overflow: visible;
 	background: #fff;
@@ -450,8 +452,8 @@ td strong {
 	position: absolute;
 	background-color: transparent;
 	top: 0px;
-	height: 20px;
-	width: 30px;
+	block-size: 20px;
+	inline-size: 30px;
 	border-top-left-radius: 10px;
 	box-shadow: white -20px 0px 0px 0px;
 	right: -30px;
@@ -484,7 +486,7 @@ td strong {
 	display: flex;
 	flex-direction: column;
 	gap: 10px;
-	max-height: 25vh;
+	max-block-size: 25dvb;
 	padding: 8px;
 	overflow: auto;
 	overscroll-behavior: contain;
@@ -508,8 +510,8 @@ td strong {
 	flex: none;
 	align-items: center;
 	justify-content: center;
-	width: 28px;
-	height: 28px;
+	inline-size: 28px;
+	block-size: 28px;
 	font-size: 0.7em;
 	font-weight: 600;
 	color: #000;
@@ -519,7 +521,7 @@ td strong {
 
 .wpch-comment-body {
 	flex: 1;
-	min-width: 0;
+	min-inline-size: 0;
 	padding: 6px 10px;
 	background: #f0f0f1;
 	border-radius: 10px;
@@ -593,9 +595,9 @@ td strong {
 .wpch-reply-composer textarea,
 .wpch-comment-composer textarea {
 	flex: 1;
-	width: 100%;
-	max-width: 100%;
-	min-width: 0;
+	inline-size: 100%;
+	max-inline-size: 100%;
+	min-inline-size: 0;
 	padding: 6px 8px;
 	font: inherit;
 	font-size: 0.85em;
@@ -748,10 +750,10 @@ tr.child-row:last-child {
 label.wpch-swatch {
 	margin: 0;
 	aspect-ratio: 1;
-	/* max-width: 100%;
+	/* max-inline-size: 100%;
 	flex: 1; */
-	width: 20px;
-	height: 20px;
+	inline-size: 20px;
+	block-size: 20px;
 	border: 1px solid color-mix(in hsl, var(--swatch), black);
 	border-radius: 100vmax;
 	display: grid;
@@ -760,10 +762,8 @@ label.wpch-swatch {
 
 	&::before {
 		content: '';
-		width: 40%;
-		height: 40%;
-		width: 12px;
-		height: 12px;
+		inline-size: 12px;
+		block-size: 12px;
 		aspect-ratio: 1;
 		border-radius: 50vw;
 		transform: scale(0);
@@ -896,8 +896,8 @@ dialog.wpch-search[open] {
 }
 /* Out-grow the global 200px text-input constraint from buttons.css. */
 dialog.wpch-search input[type='text'] {
-	min-width: 320px;
-	max-width: 340px;
+	min-inline-size: 320px;
+	max-inline-size: 340px;
 }
 .wpch-search-count {
 	color: #50575e;
