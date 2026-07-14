@@ -28,6 +28,7 @@
    version, active state) live in the card's title tooltip. */
 .wpch-plugin-card {
 	display: flex;
+	height: 100%;
 	align-items: center;
 	justify-content: space-between;
 	gap: 1em;

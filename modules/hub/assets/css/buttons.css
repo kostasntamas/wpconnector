@@ -24,9 +24,11 @@ button.button.button-primary {
 button.button.close {
 	background: red;
 	border: 1px solid color-mix(in hsl, red, gray);
-	border-radius: 100vmax;
-	aspect-ratio: 1;
-	padding: 0.2em;
+	&:has(svg) {
+		/* border-radius: 100vmax; */
+		aspect-ratio: 1;
+		padding: 0.2em;
+	}
 }
 
 .row-button,

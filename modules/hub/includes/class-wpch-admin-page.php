@@ -693,6 +693,10 @@ class WPCH_Admin_Page
 									Login URL <small style="font-weight:400;color:#666;">(empty = default)</small>
 									<input type="text" id="wpch-edit-login-<?php echo esc_attr($i); ?>" value="<?php echo esc_attr(isset($endpoint['login_url']) ? $endpoint['login_url'] : ''); ?>" placeholder="<?php echo esc_attr(WPCH_Endpoints::login_url($endpoint['url'])); ?>" style="max-width:100%;width:100%;">
 								</label>
+								<div class="spacing" style="text-align: start;display:flex;flex-direction:column;align-items:flex-start;gap:4px;">
+									Folder
+									<?php $this->render_folder_picker_fields('edit' . $i, $folders, $folder_id); ?>
+								</div>
 								<label style="text-align: start;display:flex;flex-direction:column;gap:4px;">
 									Tag
 									<select id="wpch-edit-tag-<?php echo esc_attr($i); ?>" style="max-width:100%;width:100%;">
@@ -702,9 +706,6 @@ class WPCH_Admin_Page
 										<?php endforeach; ?>
 									</select>
 								</label>
-								<div class="spacing" style="display: flex;flex-direction: column;align-items: flex-start;">
-									<?php $this->render_folder_picker_fields('edit' . $i, $folders, $folder_id); ?>
-								</div>
 								<button type="button" class="button button-primary" style="margin-top: 1em;" onclick="wpchSaveEndpointEdit(<?php echo (int) $i; ?>)">Save</button>
 							</div>
 						</div>
@@ -1180,7 +1181,7 @@ class WPCH_Admin_Page
 													<span class="wpch-swatch-picker" style="display:flex;gap:5px;"><?php echo $this->render_color_swatches('folder_color', 'editfolder' . $folder['id'], $folder['color']); ?></span>
 													<div style="margin-top:10px;margin-bottom:0;display: flex;justify-content: space-between; align-items: flex-end;">
 														<button type="submit" class="button button-primary">Save</button>
-														<button type="button" commandfor="wpch-edit-folder-dialog-<?php echo esc_attr($folder['id']); ?>" command="close" class="button">Cancel</button>
+														<button type="button" commandfor="wpch-edit-folder-dialog-<?php echo esc_attr($folder['id']); ?>" command="close" class="close button">Cancel</button>
 													</div>
 												</form>
 											</dialog>
