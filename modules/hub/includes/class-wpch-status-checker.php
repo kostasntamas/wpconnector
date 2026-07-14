@@ -50,6 +50,28 @@ class WPCH_Status_Checker
 			$cache = [];
 		}
 
+		// Opt-in escape hatch for local/dev stacks whose HTTPS setup is broken
+		// beyond the CA bundle below (self-signed endpoint certs and the like).
+		// Never enabled unless explicitly defined in wp-config.php — leave SSL
+		// verification on by default, especially for real production use.
+		$skip_verify = defined('WPCH_SSL_VERIFY_SKIP') && WPCH_SSL_VERIFY_SKIP;
+
+		// WP_Http hands curl WordPress's own CA bundle on every request it
+		// makes; going through Requests directly (WP_Http has no parallel API)
+		// skips that, and on hosts whose curl lacks a system CA store (WAMP/
+		// Windows among them) every HTTPS fetch then fails verification. The
+		// bundled Requests library only honors 'verify' on single requests —
+		// request_multiple() ignores it — so the curl handles get the CA file
+		// (or the verify opt-out) through a curl.before_multi_add hook built in
+		// ssl_hooks(); 'verify' is still set for the serial non-curl fallback.
+		$cainfo = ABSPATH . WPINC . '/certificates/ca-bundle.crt';
+
+		$options = [
+			'timeout'         => 6,
+			'connect_timeout' => 3,
+			'verify'          => $skip_verify ? false : $cainfo,
+		];
+
 		foreach ($endpoints as $i => $endpoint) {
 			// A blank key can never authenticate against the remote endpoint —
 			// skip the network round trip entirely instead of waiting out a
@@ -82,25 +104,18 @@ class WPCH_Status_Checker
 				continue;
 			}
 
-			$options = [
-				'timeout'         => 6,
-				'connect_timeout' => 3,
-			];
-
-			// Opt-in escape hatch for local/dev stacks (e.g. WAMP) whose PHP
-			// install has no CA root bundle configured, so every HTTPS request
-			// fails with "SSL certificate problem: unable to get local issuer
-			// certificate". Never enabled unless explicitly defined — leave
-			// SSL verification on by default, especially for real production use.
-			if (defined('WPCH_SSL_VERIFY_SKIP') && WPCH_SSL_VERIFY_SKIP) {
-				$options['verify'] = false;
-			}
+			// Each request needs its own Hooks instance: request_multiple()
+			// registers its response-parsing and complete callbacks per request,
+			// so a shared object would collect them once per site and dispatch
+			// the whole pile on every response.
+			$request_options          = $options;
+			$request_options['hooks'] = $this->ssl_hooks($skip_verify, $cainfo);
 
 			$base_url     = strtok(rtrim($endpoint['url'], '/'), '?');
 			$requests[$i] = [
 				'url'     => add_query_arg('key', $endpoint['key'], $base_url),
 				'type'    => \WpOrg\Requests\Requests::GET,
-				'options' => $options,
+				'options' => $request_options,
 			];
 		}
 
@@ -113,13 +128,41 @@ class WPCH_Status_Checker
 		// minus the batch start ≈ how long that endpoint actually took. On the
 		// serial fsockopen fallback the numbers come out cumulative — which is
 		// exactly the stacking worth seeing when diagnosing slow loads.
-		$durations = [];
-		$start     = microtime(true);
+		$durations   = [];
+		$start       = microtime(true);
+		$on_complete = function ($response, $id) use (&$durations, $start) {
+			$durations[$id] = round(microtime(true) - $start, 2);
+		};
+
 		$responses = \WpOrg\Requests\Requests::request_multiple($requests, [
-			'complete' => function ($response, $id) use (&$durations, $start) {
-				$durations[$id] = round(microtime(true) - $start, 2);
-			},
+			'complete' => $on_complete,
 		]);
+
+		// Transport-level failures (timeouts, dropped handshakes) get one
+		// retry: a forced refresh fires the whole list as a single parallel
+		// batch, and on a long list that contention alone can push a few slow
+		// sites past the timeout — rerunning just the failures happens without
+		// the crowd. Sites that are actually down simply fail twice, at the
+		// cost of one extra timeout wait. HTTP-level errors (a 404, a 500) are
+		// real answers from the site and are not retried.
+		$retry = [];
+		foreach ($responses as $i => $response) {
+			if ($response instanceof \WpOrg\Requests\Response) {
+				continue;
+			}
+			$retry[$i] = $requests[$i];
+			// Fresh hooks again — the first attempt's object already carries
+			// that run's internal callbacks (see above).
+			$retry[$i]['options']['hooks'] = $this->ssl_hooks($skip_verify, $cainfo);
+		}
+		if (! empty($retry)) {
+			$retried = \WpOrg\Requests\Requests::request_multiple($retry, [
+				'complete' => $on_complete,
+			]);
+			foreach ($retried as $i => $response) {
+				$responses[$i] = $response;
+			}
+		}
 
 		$fetched_at = time();
 		foreach ($responses as $i => $response) {
@@ -157,6 +200,25 @@ class WPCH_Status_Checker
 		}
 
 		return $statuses;
+	}
+
+	// Hooks carrying the curl SSL setup that request_multiple() drops on the
+	// floor (it only applies the 'verify' option on single requests): point
+	// each handle at WordPress's CA bundle, or turn peer/host verification off
+	// when WPCH_SSL_VERIFY_SKIP is set. One instance per request per attempt.
+	private function ssl_hooks(bool $skip_verify, string $cainfo): \WpOrg\Requests\Hooks
+	{
+		$hooks = new \WpOrg\Requests\Hooks();
+		$hooks->register('curl.before_multi_add', function (&$handle) use ($skip_verify, $cainfo) {
+			if ($skip_verify) {
+				curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, false);
+				curl_setopt($handle, CURLOPT_SSL_VERIFYHOST, 0);
+			} else {
+				curl_setopt($handle, CURLOPT_CAINFO, $cainfo);
+			}
+		});
+
+		return $hooks;
 	}
 
 	// $response is a \WpOrg\Requests\Response or a \Throwable from

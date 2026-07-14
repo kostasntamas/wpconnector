@@ -1108,9 +1108,9 @@ class WPCH_Admin_Page
 					// filters live while typing). Enter keeps the filter, Esc clears it.
 					?>
 					<dialog id="wpch-search" class="wpch-search">
-						<input type="text" id="wpch-search-input" placeholder="Filter sites by domain&hellip;" autocomplete="off">
+						<input type="text" id="wpch-search-input" placeholder="Filter sites by domain.." autocomplete="off">
 						<span class="wpch-search-count" id="wpch-search-count"></span>
-						<em style="font-size:smaller; opacity: .65;">Enter keeps the filter &middot; Esc clears</em>
+						<em style="font-size:smaller; opacity: .65;"><kbd>Enter</kbd> keeps the filter | <kbd>Esc</kbd> clears</em>
 					</dialog>
 					<?php
 					// The whole tab system (tab bar + tier panels + the main-table
