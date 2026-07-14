@@ -24,36 +24,30 @@
 	padding: 1em;
 }
 
+/* Compact one-line card: name + site count; the per-site details (domain,
+   version, active state) live in the card's title tooltip. */
 .wpch-plugin-card {
 	display: flex;
-	flex-direction: column;
-	gap: 0.5em;
-	padding: 0.8em;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1em;
+	padding: 0.5em 0.8em;
 	text-align: start;
 	background: #fff;
 	border: 1px solid #dcdcde;
 	border-radius: 4px;
+	cursor: help;
 }
 
-.wpch-plugin-sites {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.4em;
-}
-
-.wpch-plugin-site {
+.wpch-plugin-count {
+	flex: none;
 	font-size: 0.75rem;
 	padding: 0.15em 0.6em;
 	color: #3c434a;
 	background: #f0f0f1;
 	border: 1px solid #dcdcde;
 	border-radius: 999px;
-	cursor: help;
-}
-
-.wpch-plugin-site.is-inactive {
-	color: #8c8f94;
-	border-style: dashed;
+	white-space: nowrap;
 }
 
 .wpch-sidebar {
@@ -789,6 +783,10 @@ tr.child-row:last-child {
 		border-bottom: 1px dashed color-mix(in hsl, var(--folder), black);
 		border-radius: 0 0 0 3px;
 	}
+}
+
+:not(button, a)[title] {
+	cursor: help;
 }
 
 label.wpch-swatch {

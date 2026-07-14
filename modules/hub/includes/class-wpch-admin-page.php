@@ -444,15 +444,15 @@ class WPCH_Admin_Page
 				<?php endif; ?>
 				<?php
 				echo ' <div>';
-				echo ' <span style="font-weight:500; cursor: help;" title="total">';
+				echo ' <span style="font-weight:500;" title="total">';
 				echo esc_html($status['plugins_total']);
 				echo ' </span>';
 				echo ' / ';
-				echo ' <span style="font-weight:500; cursor: help;" title="active">';
+				echo ' <span style="font-weight:500;" title="active">';
 				echo esc_html($status['plugins_active']);
 				echo ' </span>';
 				echo '/ ';
-				echo ' <span style="font-weight:500; cursor: help;" title="inactive">';
+				echo ' <span style="font-weight:500;" title="inactive">';
 				echo esc_html($status['plugins_inactive']);
 				echo ' </span>';
 				echo ' </div>';
@@ -550,13 +550,17 @@ class WPCH_Admin_Page
 				<?php else : ?>
 					<div class="wpch-all-plugins-grid">
 						<?php foreach ($plugins as $plugin) : ?>
-							<div class="wpch-plugin-card">
+							<?php
+							// The site list lives in the card's tooltip, one site
+							// per line, so the grid stays compact.
+							$site_lines = [];
+							foreach ($plugin['sites'] as $site => $info) {
+								$site_lines[] = $site . ' — v' . $info['version'] . ($info['active'] ? ' (active)' : ' (inactive)');
+							}
+							?>
+							<div class="wpch-plugin-card" title="<?php echo esc_attr(implode("\n", $site_lines)); ?>">
 								<strong><?php echo esc_html($plugin['name']); ?></strong>
-								<div class="wpch-plugin-sites">
-									<?php foreach ($plugin['sites'] as $site => $info) : ?>
-										<span class="wpch-plugin-site<?php echo $info['active'] ? '' : ' is-inactive'; ?>" title="<?php echo esc_attr('v' . $info['version'] . ($info['active'] ? ' (active)' : ' (inactive)')); ?>"><?php echo esc_html($site); ?></span>
-									<?php endforeach; ?>
-								</div>
+								<span class="wpch-plugin-count"><?php echo count($plugin['sites']); ?> <?php echo 1 === count($plugin['sites']) ? 'site' : 'sites'; ?></span>
 							</div>
 						<?php endforeach; ?>
 					</div>
