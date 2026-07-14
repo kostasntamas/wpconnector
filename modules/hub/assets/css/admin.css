@@ -124,18 +124,21 @@
 }
 
 /* Sticky top bar: search bar (opens the Ctrl+K palette) + user chip + logout. */
-.wpch-topbar {
+#wpch-top {
 	position: sticky;
 	top: 0;
 	z-index: 10;
+	background: #fff;
+	border-bottom: 1px solid #dcdcde;
+}
+
+.wpch-topbar {
 	display: flex;
 	align-items: center;
 	justify-content: flex-end;
 	gap: 1.5em;
 	min-height: var(--wpch-topbar-h);
-	padding: 0 1.4rem;
-	background: #fff;
-	border-bottom: 1px solid #dcdcde;
+	/* padding: 0 1.4rem; */
 }
 
 .wpch-search-bar {
@@ -241,12 +244,16 @@
 }
 
 .wrapper {
-	padding-block: 1.5rem 3rem;
-	inline-size: min(100% - 4.2rem, 1600px);
+	inline-size: min(100% - 4rem, 1920px);
 	margin-inline: auto;
+}
+
+.main-content {
+	padding-block: 1.5rem 3rem;
 	min-block-size: 100dvb;
 }
-.wrapper > *:not(dialog) + *:not(dialog) {
+
+.main-content > *:not(dialog) + *:not(dialog) {
 	margin-top: 1em;
 }
 
@@ -784,12 +791,21 @@ label.wpch-swatch {
 	margin-block-start: 2em;
 	margin-block-end: 2em;
 }
+.filters-tags-wrapper {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-block-end: 0.8em;
+
+	&:not(:has([data-tab='all'].is-active)) .wpch-filters {
+		display: none;
+	}
+}
 
 .wpch-health-tablist {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.4em;
-	margin-block-end: 0.8em;
 }
 
 .wpch-health-tab {
@@ -835,7 +851,11 @@ label.wpch-swatch {
 	display: flex;
 	align-items: center;
 	gap: 1.5em;
-	margin: 2.5rem 0 1em 0;
+	justify-content: flex-end;
+
+	.wpch-search-count:empty {
+		display: none;
+	}
 }
 .wpch-filters label {
 	display: flex;

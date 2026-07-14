@@ -712,21 +712,48 @@ class WPCH_Admin_Page
 
 	?>
 		<div id="wpch-health-tabs-swap">
-			<div class="wpch-health-tablist" role="tablist">
-				<button type="button" class="wpch-health-tab is-active" data-tab="all" style="--tab-color:#00325c;">
-					Sites Status <span class="wpch-health-count"><?php echo count($endpoints); ?></span>
-				</button>
-				<?php foreach ($tiers as $label => $color) : ?>
-					<?php if ($groups[$label]) : ?>
-						<button type="button" class="wpch-health-tab" data-tab="<?php echo esc_attr(sanitize_title($label)); ?>" style="--tab-color:<?php echo esc_attr($color); ?>;">
-							<?php echo esc_html($label); ?> <span class="wpch-health-count"><?php echo count($groups[$label]); ?></span>
-						</button>
-					<?php else : ?>
-						<button type="button" class="wpch-health-tab" disabled title="No sites in this status">
-							<?php echo esc_html($label); ?> <span class="wpch-health-count">0</span>
-						</button>
-					<?php endif; ?>
-				<?php endforeach; ?>
+			<div class="filters-tags-wrapper">
+				<div class="wpch-health-tablist" role="tablist">
+					<button type="button" class="wpch-health-tab is-active" data-tab="all" style="--tab-color:#00325c;">
+						Sites Status <span class="wpch-health-count"><?php echo count($endpoints); ?></span>
+					</button>
+					<?php foreach ($tiers as $label => $color) : ?>
+						<?php if ($groups[$label]) : ?>
+							<button type="button" class="wpch-health-tab" data-tab="<?php echo esc_attr(sanitize_title($label)); ?>" style="--tab-color:<?php echo esc_attr($color); ?>;">
+								<?php echo esc_html($label); ?> <span class="wpch-health-count"><?php echo count($groups[$label]); ?></span>
+							</button>
+						<?php else : ?>
+							<button type="button" class="wpch-health-tab" disabled title="No sites in this status">
+								<?php echo esc_html($label); ?> <span class="wpch-health-count">0</span>
+							</button>
+						<?php endif; ?>
+					<?php endforeach; ?>
+				</div>
+				<div class="wpch-filters">
+					<label for="wpch-filter-tag">
+						Tag
+						<select id="wpch-filter-tag">
+							<option value="">All</option>
+							<option value="__none__">No tag</option>
+							<?php foreach (WPCH_Endpoints::tag_presets() as $slug => $preset) : ?>
+								<option value="<?php echo esc_attr($slug); ?>"><?php echo esc_html($preset['label']); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</label>
+					<label for="wpch-filter-wp">
+						WP version
+						<select id="wpch-filter-wp">
+							<option value="">All</option>
+						</select>
+					</label>
+					<label for="wpch-filter-php">
+						PHP version
+						<select id="wpch-filter-php">
+							<option value="">All</option>
+						</select>
+					</label>
+					<span class="wpch-search-count" id="wpch-filter-count"></span>
+				</div>
 			</div>
 			<?php foreach ($groups as $label => $rows) : ?>
 				<?php if (! $rows) continue; ?>
@@ -963,19 +990,21 @@ class WPCH_Admin_Page
 				$current_user = wp_get_current_user();
 				$display_name = $current_user->display_name ? $current_user->display_name : $current_user->user_login;
 				?>
-				<header class="wpch-topbar" id="wpch-top">
-					<span style="margin-right: auto;">WP Connector <b>Hub</b></span>
-					<button type="button" id="wpch-search-btn" class="wpch-search-bar" title="Filter the table by domain">
-						<?php echo WPCH_Icons::get('search', 18); ?>
-						<kbd>Ctrl+K</kbd>
-					</button>
-					<div class="wpch-topbar-user">
-						<div class="wpch-user-chip" id="user-<?php echo esc_attr($current_user->ID); ?>" title="<?php echo esc_attr($current_user->user_login); ?>">
-							<span class="wpch-user-avatar"><?php echo esc_html(self::initials($display_name)); ?></span>
-							<span class="wpch-user-name" hidden><?php echo esc_html($display_name); ?></span>
+				<header id="wpch-top">
+					<div class="wrapper wpch-topbar">
+						<span style="margin-right: auto;">WP Connector <b>Hub</b></span>
+						<button type="button" id="wpch-search-btn" class="wpch-search-bar" title="Filter the table by domain">
+							<?php echo WPCH_Icons::get('search', 18); ?>
+							<kbd>Ctrl+K</kbd>
+						</button>
+						<div class="wpch-topbar-user">
+							<div class="wpch-user-chip" id="user-<?php echo esc_attr($current_user->ID); ?>" title="<?php echo esc_attr($current_user->user_login); ?>">
+								<span class="wpch-user-avatar"><?php echo esc_html(self::initials($display_name)); ?></span>
+								<span class="wpch-user-name" hidden><?php echo esc_html($display_name); ?></span>
+							</div>
+							<a class="wpch-logout" title="logout" href="<?php echo esc_url(wp_logout_url(home_url())); ?>">
+								<?php echo WPCH_Icons::get('logout', 20); ?></a>
 						</div>
-						<a class="wpch-logout" title="logout" href="<?php echo esc_url(wp_logout_url(home_url())); ?>">
-							<?php echo WPCH_Icons::get('logout', 20); ?></a>
 					</div>
 				</header>
 				<a style="position: fixed;bottom: 1.4rem;right: 1.4rem;text-decoration: none; color: #3b02bb;" href="#wpch-top" title="Back to top"><?php echo WPCH_Icons::get('arrow-up-circle', 32); ?></a>
@@ -984,7 +1013,7 @@ class WPCH_Admin_Page
 						<p>Import failed: <?php echo ('format' === $_GET['wpch_import_error']) ? 'the file was not valid JSON in the expected format.' : 'no file was uploaded.'; ?></p>
 					</div>
 				<?php endif; ?>
-				<div class="wrapper">
+				<div class="wrapper main-content">
 					<h2 style="display:flex;align-items:center;gap:1em;">
 						Sites
 						<span class="wpch-total-count"><?php echo count($endpoints); ?> total</span>
@@ -1018,31 +1047,7 @@ class WPCH_Admin_Page
 							// data-wp/data-php attributes so they stay in sync after
 							// row swaps (add/refresh/delete).
 							?>
-							<div class="wpch-filters">
-								<label for="wpch-filter-tag">
-									Tag
-									<select id="wpch-filter-tag">
-										<option value="">All</option>
-										<option value="__none__">No tag</option>
-										<?php foreach (WPCH_Endpoints::tag_presets() as $slug => $preset) : ?>
-											<option value="<?php echo esc_attr($slug); ?>"><?php echo esc_html($preset['label']); ?></option>
-										<?php endforeach; ?>
-									</select>
-								</label>
-								<label for="wpch-filter-wp">
-									WP version
-									<select id="wpch-filter-wp">
-										<option value="">All</option>
-									</select>
-								</label>
-								<label for="wpch-filter-php">
-									PHP version
-									<select id="wpch-filter-php">
-										<option value="">All</option>
-									</select>
-								</label>
-								<span class="wpch-search-count" id="wpch-filter-count"></span>
-							</div>
+
 							<div class="site-status-form spacing">
 								<table class="wpch-status-table" id="wpch-status-table">
 									<thead>
