@@ -321,27 +321,11 @@
 			return tb.dataset.folderId;
 		});
 
-		var data = new FormData();
-		data.set('action', 'wpch_reorder');
-		data.set('_wpnonce', typeof wpchGetManageNonce === 'function' ? wpchGetManageNonce() : '');
-		data.set('rows', JSON.stringify(rows));
-		data.set('folder_order', folderIds.join(','));
-
-		fetch(ajaxurl, {
-			method: 'POST',
-			credentials: 'same-origin',
-			body: data,
-		})
-			.then(function (r) {
-				return r.json();
-			})
-			.then(function (res) {
-				if (!res.success) {
-					alert((res.data && res.data.message) || 'Could not save the new order.');
-				}
-			})
-			.catch(function () {
-				alert('Could not save the new order. Please reload and try again.');
-			});
+		wpchPost('wpch_reorder', {
+			rows: JSON.stringify(rows),
+			folder_order: folderIds.join(','),
+		}).catch(function (err) {
+			alert(err.message || 'Could not save the new order. Please reload and try again.');
+		});
 	}
 })();

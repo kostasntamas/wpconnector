@@ -82,25 +82,6 @@
 	gap: 1.6em;
 }
 
-.wpch-brand {
-	display: flex;
-	align-items: center;
-	gap: 0.7ch;
-	font-size: 0.9rem;
-	font-weight: 400;
-	line-height: 1;
-	text-align: left;
-}
-
-.wpch-brand svg {
-	flex: none;
-	color: #72aee6;
-}
-
-.wpch-brand b {
-	font-weight: 700;
-}
-
 .wpch-side-group {
 	display: flex;
 	flex-direction: column;
@@ -467,6 +448,7 @@ td strong {
 	position-anchor: --edits;
 	inline-size: 420px;
 	position: fixed;
+	margin: 0; /* the UA default is auto, which fights the anchored inset */
 	max-inline-size: calc(100vw - 16px);
 	padding: 0;
 	overflow: visible;
@@ -932,7 +914,7 @@ dialog.wpch-search {
 dialog.wpch-search[open] {
 	display: flex;
 	align-items: center;
-	gap: 1.5ch;
+	/* gap: 1.5ch; */
 }
 /* Out-grow the global 200px text-input constraint from buttons.css. */
 dialog.wpch-search input[type='text'] {

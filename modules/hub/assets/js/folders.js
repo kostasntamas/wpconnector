@@ -35,16 +35,9 @@ document.addEventListener('change', function (e) {
 		return;
 	}
 
-	var data = new FormData();
-	data.set('action', 'wpch_folder_state');
-	data.set('_wpnonce', wpchGetManageNonce());
-	data.set('folder_id', checkbox.id.replace('wpch-folder-toggle-', ''));
-	data.set('open', checkbox.checked ? '1' : '0');
-
-	fetch(ajaxurl, {
-		method: 'POST',
-		credentials: 'same-origin',
-		body: data,
+	wpchPost('wpch_folder_state', {
+		folder_id: checkbox.id.replace('wpch-folder-toggle-', ''),
+		open: checkbox.checked ? '1' : '0',
 	}).catch(function () {
 		// Best-effort: worst case the group reopens on the next page load.
 	});

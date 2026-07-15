@@ -42,16 +42,23 @@ class WPCH_Ajax
 		add_action('wp_ajax_wpch_folder_state', [$this, 'folder_state']);
 	}
 
-	// Called from folders.js when a folder group is collapsed/expanded:
-	// persists the per-user open state in user meta (WPCH_Folders::set_open_state()),
-	// so the settings page renders each group the way this user left it.
-	public function folder_state()
+	// Shared guard of the AJAX handlers: manage_options plus the wpch_manage
+	// nonce (delete_endpoint keeps its own per-row nonce action).
+	private function require_manager()
 	{
 		if (! current_user_can('manage_options')) {
 			wp_send_json_error(['message' => 'Forbidden'], 403);
 		}
 
 		check_ajax_referer('wpch_manage');
+	}
+
+	// Called from folders.js when a folder group is collapsed/expanded:
+	// persists the per-user open state in user meta (WPCH_Folders::set_open_state()),
+	// so the settings page renders each group the way this user left it.
+	public function folder_state()
+	{
+		$this->require_manager();
 
 		$folder_id = isset($_POST['folder_id']) ? sanitize_text_field(wp_unslash($_POST['folder_id'])) : '';
 		if ('' === $folder_id) {
@@ -69,11 +76,7 @@ class WPCH_Ajax
 	// wpch_folders option order.
 	public function reorder()
 	{
-		if (! current_user_can('manage_options')) {
-			wp_send_json_error(['message' => 'Forbidden'], 403);
-		}
-
-		check_ajax_referer('wpch_manage');
+		$this->require_manager();
 
 		$rows = isset($_POST['rows']) ? json_decode(wp_unslash($_POST['rows']), true) : null;
 		if (! is_array($rows)) {
@@ -104,11 +107,7 @@ class WPCH_Ajax
 
 	public function add_endpoint()
 	{
-		if (! current_user_can('manage_options')) {
-			wp_send_json_error(['message' => 'Forbidden'], 403);
-		}
-
-		check_ajax_referer('wpch_manage');
+		$this->require_manager();
 
 		if (empty($_POST['new_url']) || ! is_string($_POST['new_url'])) {
 			wp_send_json_error(['message' => 'A URL is required.']);
@@ -117,15 +116,7 @@ class WPCH_Ajax
 		$folder_count_before = count($this->folders->get_all());
 		$existing_endpoints  = $this->endpoints->get_all();
 
-		$url      = esc_url_raw(WPCH_Endpoints::normalize_url($_POST['new_url']));
-		$endpoint = [
-			'url'       => $url,
-			'key'       => isset($_POST['new_key']) ? sanitize_text_field(trim($_POST['new_key'])) : '',
-			'login_url' => isset($_POST['new_login_url']) && is_string($_POST['new_login_url']) ? WPCH_Endpoints::normalize_login_url(wp_unslash($_POST['new_login_url']), $url) : '',
-			'folder_id' => $this->folders->resolve_choice($_POST),
-			'comments'  => [],
-			'tag'       => '',
-		];
+		$endpoint = $this->endpoints->build_from_post($_POST, $this->folders);
 
 		// A brand-new folder, the first site landing in a previously-empty
 		// folder, or the first ungrouped site has no existing <tbody> to insert
@@ -153,35 +144,37 @@ class WPCH_Ajax
 
 		$i         = $this->endpoints->add($endpoint);
 		$endpoints = $this->endpoints->get_all();
-		$endpoint  = $endpoints[$i];
 
 		if ($needs_reload) {
 			wp_send_json_success(['reload' => true]);
 		}
 
+		$this->send_row($i, $endpoints);
+	}
+
+	// Shared success tail of add/update: the freshly-rendered row for the
+	// client to swap in place (section/folder changes take the reload:true
+	// path before getting here).
+	private function send_row(int $index, array $endpoints)
+	{
 		$all_folders   = $this->folders->get_all();
-		$statuses      = $this->status_checker->fetch_statuses([$i => $endpoint]);
+		$statuses      = $this->status_checker->fetch_statuses([$index => $endpoints[$index]]);
 		$positions     = $this->admin_page->compute_positions($endpoints, $all_folders);
 		$domain_counts = $this->admin_page->compute_domain_counts($endpoints);
 
 		ob_start();
-		$this->admin_page->render_endpoint_row($i, $endpoint, $statuses[$i], '' !== $endpoint['folder_id'], $all_folders, $positions[$i], $domain_counts);
-		$row_html = ob_get_clean();
+		$this->admin_page->render_endpoint_row($index, $endpoints[$index], $statuses[$index], $all_folders, $positions[$index], $domain_counts);
 
 		wp_send_json_success([
 			'reload'    => false,
-			'folder_id' => $endpoint['folder_id'],
-			'row_html'  => $row_html,
+			'folder_id' => isset($endpoints[$index]['folder_id']) ? $endpoints[$index]['folder_id'] : '',
+			'row_html'  => ob_get_clean(),
 		]);
 	}
 
 	public function update_endpoint()
 	{
-		if (! current_user_can('manage_options')) {
-			wp_send_json_error(['message' => 'Forbidden'], 403);
-		}
-
-		check_ajax_referer('wpch_manage');
+		$this->require_manager();
 
 		$index     = isset($_POST['index']) ? (int) $_POST['index'] : -1;
 		$endpoints = $this->endpoints->get_all();
@@ -197,8 +190,8 @@ class WPCH_Ajax
 		$old_folder_id       = isset($endpoints[$index]['folder_id']) ? $endpoints[$index]['folder_id'] : '';
 		$folder_count_before = count($this->folders->get_all());
 
-		$endpoints[$index]['url']       = esc_url_raw(WPCH_Endpoints::normalize_url($_POST['edit_url']));
-		$endpoints[$index]['key']       = isset($_POST['edit_key']) ? sanitize_text_field(trim($_POST['edit_key'])) : '';
+		$endpoints[$index]['url']       = esc_url_raw(WPCH_Endpoints::normalize_url(wp_unslash($_POST['edit_url'])));
+		$endpoints[$index]['key']       = isset($_POST['edit_key']) && is_string($_POST['edit_key']) ? sanitize_text_field(trim(wp_unslash($_POST['edit_key']))) : '';
 		$endpoints[$index]['folder_id'] = $this->folders->resolve_choice($_POST);
 		// edit_tag is absent from older cached JS — leave the stored tag alone then.
 		if (isset($_POST['edit_tag']) && is_string($_POST['edit_tag'])) {
@@ -223,19 +216,7 @@ class WPCH_Ajax
 			wp_send_json_success(['reload' => true]);
 		}
 
-		$all_folders   = $this->folders->get_all();
-		$statuses      = $this->status_checker->fetch_statuses([$index => $endpoints[$index]]);
-		$positions     = $this->admin_page->compute_positions($endpoints, $all_folders);
-		$domain_counts = $this->admin_page->compute_domain_counts($endpoints);
-
-		ob_start();
-		$this->admin_page->render_endpoint_row($index, $endpoints[$index], $statuses[$index], '' !== $endpoints[$index]['folder_id'], $all_folders, $positions[$index], $domain_counts);
-		$row_html = ob_get_clean();
-
-		wp_send_json_success([
-			'reload'   => false,
-			'row_html' => $row_html,
-		]);
+		$this->send_row($index, $endpoints);
 	}
 
 	// Shared success response of the comment endpoints: the freshly-rendered
@@ -258,11 +239,7 @@ class WPCH_Ajax
 	// or sends an error response. Used by the three comment endpoints.
 	private function require_comment_row(): array
 	{
-		if (! current_user_can('manage_options')) {
-			wp_send_json_error(['message' => 'Forbidden'], 403);
-		}
-
-		check_ajax_referer('wpch_manage');
+		$this->require_manager();
 
 		$index     = isset($_POST['index']) ? (int) $_POST['index'] : -1;
 		$endpoints = $this->endpoints->get_all();
@@ -382,11 +359,7 @@ class WPCH_Ajax
 
 	public function refresh_statuses()
 	{
-		if (! current_user_can('manage_options')) {
-			wp_send_json_error(['message' => 'Forbidden'], 403);
-		}
-
-		check_ajax_referer('wpch_manage');
+		$this->require_manager();
 
 		$endpoints = $this->endpoints->get_all();
 
@@ -399,7 +372,11 @@ class WPCH_Ajax
 		}
 
 		if ($index >= 0) {
-			$statuses          = $this->status_checker->fetch_statuses($endpoints);
+			// The target row is left out of the unforced batch so it isn't
+			// fetched twice when its cache entry has expired.
+			$others = $endpoints;
+			unset($others[$index]);
+			$statuses          = $this->status_checker->fetch_statuses($others);
 			$forced            = $this->status_checker->fetch_statuses([$index => $endpoints[$index]], true);
 			$statuses[$index]  = $forced[$index];
 			$render_indexes    = [$index];
@@ -412,19 +389,10 @@ class WPCH_Ajax
 		$positions     = $this->admin_page->compute_positions($endpoints, $all_folders);
 		$domain_counts = $this->admin_page->compute_domain_counts($endpoints);
 
-		$folder_by_id = [];
-		foreach ($all_folders as $folder) {
-			$folder_by_id[$folder['id']] = $folder;
-		}
-
 		$rows = [];
 		foreach ($render_indexes as $i) {
-			$endpoint  = $endpoints[$i];
-			$fid       = isset($endpoint['folder_id']) ? $endpoint['folder_id'] : '';
-			$in_folder = $fid && isset($folder_by_id[$fid]);
-
 			ob_start();
-			$this->admin_page->render_endpoint_row($i, $endpoint, $statuses[$i], $in_folder, $all_folders, $positions[$i], $domain_counts);
+			$this->admin_page->render_endpoint_row($i, $endpoints[$i], $statuses[$i], $all_folders, $positions[$i], $domain_counts);
 			$rows[$i] = ob_get_clean();
 		}
 

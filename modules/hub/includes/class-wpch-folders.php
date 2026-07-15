@@ -187,7 +187,7 @@ class WPCH_Folders
 				return '';
 			}
 			$color = isset($post['new_folder_color']) ? $this->sanitize_color($post['new_folder_color']) : null;
-			return $this->create(sanitize_text_field($post['new_folder_name']), $color);
+			return $this->create(sanitize_text_field(wp_unslash($post['new_folder_name'])), $color);
 		}
 
 		$folder_id = sanitize_text_field($post['folder_choice']);

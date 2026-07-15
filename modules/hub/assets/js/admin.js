@@ -8,6 +8,43 @@ function wpchGetManageNonce() {
 	return nonceField ? nonceField.value : '';
 }
 
+// Shared admin-ajax POST used by every script on the page: sends the action
+// plus fields (a plain object or a ready FormData) with the manage nonce —
+// fields may carry their own _wpnonce (the per-row delete nonce). Resolves
+// with the response's data payload; rejects with an Error whose message is
+// the server's when it sent one, or '' on network/parse failures so callers
+// can fall back to their own text.
+function wpchPost(action, fields) {
+	var data = fields instanceof FormData ? fields : new FormData();
+	if (fields && !(fields instanceof FormData)) {
+		Object.keys(fields).forEach(function (key) {
+			data.set(key, fields[key]);
+		});
+	}
+	data.set('action', action);
+	if (!data.has('_wpnonce')) {
+		data.set('_wpnonce', wpchGetManageNonce());
+	}
+
+	return fetch(ajaxurl, {
+		method: 'POST',
+		credentials: 'same-origin',
+		body: data,
+	})
+		.then(function (r) {
+			return r.json();
+		})
+		.catch(function () {
+			throw new Error('');
+		})
+		.then(function (res) {
+			if (!res.success) {
+				throw new Error((res.data && res.data.message) || '');
+			}
+			return res.data;
+		});
+}
+
 function wpchSaveEndpointEdit(index) {
 	var dialog = document.getElementById('wpch-edit-dialog-' + index);
 	if (!dialog) {
@@ -20,62 +57,50 @@ function wpchSaveEndpointEdit(index) {
 	var tagSelect = document.getElementById('wpch-edit-tag-' + index);
 	var folderSelect = dialog.querySelector('select[name="folder_choice"]');
 
-	var data = new FormData();
-	data.set('action', 'wpch_update_endpoint');
-	data.set('_wpnonce', wpchGetManageNonce());
-	data.set('index', index);
-	data.set('edit_url', urlInput ? urlInput.value : '');
-	data.set('edit_key', keyInput ? keyInput.value : '');
+	var fields = {
+		index: index,
+		edit_url: urlInput ? urlInput.value : '',
+		edit_key: keyInput ? keyInput.value : '',
+	};
 	if (loginInput) {
-		data.set('edit_login_url', loginInput.value);
+		fields.edit_login_url = loginInput.value;
 	}
 	if (tagSelect) {
-		data.set('edit_tag', tagSelect.value);
+		fields.edit_tag = tagSelect.value;
 	}
 
 	if (folderSelect) {
-		data.set('folder_choice', folderSelect.value);
+		fields.folder_choice = folderSelect.value;
 
 		if ('__new__' === folderSelect.value) {
 			var nameInput = dialog.querySelector('input[name="new_folder_name"]');
 			var colorInput = dialog.querySelector('input[name="new_folder_color"]:checked');
-			data.set('new_folder_name', nameInput ? nameInput.value : '');
+			fields.new_folder_name = nameInput ? nameInput.value : '';
 			if (colorInput) {
-				data.set('new_folder_color', colorInput.value);
+				fields.new_folder_color = colorInput.value;
 			}
 		} else if (folderSelect.value) {
 			var recolorInput = dialog.querySelector('input[name="recolor_folder_color"]:checked');
 			if (recolorInput) {
-				data.set('recolor_folder_color', recolorInput.value);
+				fields.recolor_folder_color = recolorInput.value;
 			}
 		}
 	}
 
-	fetch(ajaxurl, {
-		method: 'POST',
-		credentials: 'same-origin',
-		body: data,
-	})
-		.then(function (r) {
-			return r.json();
-		})
-		.then(function (res) {
-			if (!res.success) {
-				alert((res.data && res.data.message) || 'Could not save changes.');
-				return;
-			}
-			if (res.data.reload) {
+	wpchPost('wpch_update_endpoint', fields)
+		.then(function (data) {
+			if (data.reload) {
 				window.location.reload();
 				return;
 			}
 			var row = document.getElementById('wpch-row-' + index);
 			if (row) {
-				row.outerHTML = res.data.row_html;
+				row.outerHTML = data.row_html;
 			}
 			wpchRenumberRows();
 		})
-		.catch(function () {
-			alert('Could not save changes. Please try again.');
+		.catch(function (err) {
+			alert(err.message || 'Could not save changes. Please try again.');
 		});
 }
 
@@ -154,27 +179,14 @@ document.addEventListener('submit', function (e) {
 	e.preventDefault();
 
 	var form = e.target;
-	var data = new FormData(form);
-	data.set('action', 'wpch_add_endpoint');
 
-	fetch(ajaxurl, {
-		method: 'POST',
-		credentials: 'same-origin',
-		body: data,
-	})
-		.then(function (r) {
-			return r.json();
-		})
-		.then(function (res) {
-			if (!res.success) {
-				alert((res.data && res.data.message) || 'Could not add site.');
-				return;
-			}
-			if (res.data.reload) {
+	wpchPost('wpch_add_endpoint', new FormData(form))
+		.then(function (data) {
+			if (data.reload) {
 				window.location.reload();
 				return;
 			}
-			wpchInsertRow(res.data);
+			wpchInsertRow(data);
 			form.reset();
 			// The form lives in the sidebar's Add Site dialog — close it on success.
 			var dialog = form.closest('dialog');
@@ -182,8 +194,8 @@ document.addEventListener('submit', function (e) {
 				dialog.close();
 			}
 		})
-		.catch(function () {
-			alert('Could not add site. Please try again.');
+		.catch(function (err) {
+			alert(err.message || 'Could not add site. Please try again.');
 		});
 });
 
@@ -202,28 +214,16 @@ document.addEventListener('click', function (e) {
 
 	var url = new URL(link.href, window.location.href);
 	var index = link.getAttribute('data-index');
-	var data = new FormData();
-	data.set('action', 'wpch_delete_endpoint');
-	data.set('index', index);
-	data.set('_wpnonce', url.searchParams.get('_wpnonce'));
 
-	fetch(ajaxurl, {
-		method: 'POST',
-		credentials: 'same-origin',
-		body: data,
+	wpchPost('wpch_delete_endpoint', {
+		index: index,
+		_wpnonce: url.searchParams.get('_wpnonce') || '',
 	})
-		.then(function (r) {
-			return r.json();
-		})
-		.then(function (res) {
-			if (!res.success) {
-				alert((res.data && res.data.message) || 'Could not delete site.');
-				return;
-			}
+		.then(function () {
 			wpchRemoveRow(index);
 		})
-		.catch(function () {
-			alert('Could not delete site. Please try again.');
+		.catch(function (err) {
+			alert(err.message || 'Could not delete site. Please try again.');
 		});
 });
 
@@ -231,37 +231,24 @@ document.addEventListener('click', function (e) {
 // swaps the returned row HTML in place and re-renders the health tabs.
 // Shared by the global Refresh button and the per-row refresh buttons.
 function wpchRefreshStatuses(index) {
-	var data = new FormData();
-	data.set('action', 'wpch_refresh_statuses');
-	data.set('_wpnonce', wpchGetManageNonce());
+	var fields = {};
 	if (index !== undefined && index !== null && index !== '') {
-		data.set('index', index);
+		fields.index = index;
 	}
 
-	return fetch(ajaxurl, {
-		method: 'POST',
-		credentials: 'same-origin',
-		body: data,
-	})
-		.then(function (r) {
-			return r.json();
-		})
-		.then(function (res) {
-			if (!res.success) {
-				alert((res.data && res.data.message) || 'Could not refresh sites.');
-				return;
-			}
-			Object.keys(res.data.rows).forEach(function (i) {
+	return wpchPost('wpch_refresh_statuses', fields)
+		.then(function (data) {
+			Object.keys(data.rows).forEach(function (i) {
 				var row = document.getElementById('wpch-row-' + i);
 				if (row) {
-					row.outerHTML = res.data.rows[i];
+					row.outerHTML = data.rows[i];
 				}
 			});
 			wpchRenumberRows();
-			wpchReplaceHealthTabs(res.data.health_tabs);
+			wpchReplaceHealthTabs(data.health_tabs);
 		})
-		.catch(function () {
-			alert('Could not refresh sites. Please try again.');
+		.catch(function (err) {
+			alert(err.message || 'Could not refresh sites. Please try again.');
 		});
 }
 

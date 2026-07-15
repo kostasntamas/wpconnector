@@ -115,6 +115,22 @@ class WPCH_Endpoints
 		return isset($presets[$tag]) ? $tag : '';
 	}
 
+	// Builds a new endpoint row from the Add form's fields (the caller has
+	// already checked that new_url is a non-empty string). Shared by the AJAX
+	// add handler and the no-JS form fallback so the two can't drift apart.
+	public function build_from_post(array $post, WPCH_Folders $folders): array
+	{
+		$url = esc_url_raw(self::normalize_url(wp_unslash($post['new_url'])));
+		return [
+			'url'       => $url,
+			'key'       => isset($post['new_key']) && is_string($post['new_key']) ? sanitize_text_field(trim(wp_unslash($post['new_key']))) : '',
+			'login_url' => isset($post['new_login_url']) && is_string($post['new_login_url']) ? self::normalize_login_url(wp_unslash($post['new_login_url']), $url) : '',
+			'folder_id' => $folders->resolve_choice($post),
+			'comments'  => [],
+			'tag'       => '',
+		];
+	}
+
 	public function next_order(array $endpoints): int
 	{
 		$max = 0;

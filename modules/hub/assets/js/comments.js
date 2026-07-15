@@ -9,7 +9,7 @@
 // composer lives outside the thread container, and a heartbeat swap is skipped
 // while a reply composer inside it holds text or focus.
 //
-// Depends on wpchGetManageNonce() from admin.js (handle wpch-admin).
+// Depends on wpchPost() from admin.js (handle wpch-admin).
 
 var wpchOpenCommentIndex = null; // row index of the open popover, or null
 var wpchOpenCommentEndpointId = null; // that row's endpoint id, for heartbeat
@@ -17,29 +17,6 @@ var wpchOpenCommentEndpointId = null; // that row's endpoint id, for heartbeat
 function wpchRowEndpointId(index) {
 	var row = document.getElementById('wpch-row-' + index);
 	return row ? row.getAttribute('data-id') : '';
-}
-
-// Places the popover next to the row's comment button: below it when there's
-// room, above it otherwise, clamped to the viewport. Popovers sit in the top
-// layer with position:fixed, so viewport coordinates apply directly.
-function wpchPositionCommentPopover(pop, index) {
-	var row = document.getElementById('wpch-row-' + index);
-	var btn = row ? row.querySelector('.comment-btn') : null;
-	if (!btn) {
-		return; // Leave the browser's default centered position.
-	}
-	var rect = btn.getBoundingClientRect();
-	pop.style.margin = '0';
-	// pop.style.inset = 'auto';
-	var width = pop.offsetWidth;
-	var height = pop.offsetHeight;
-	// var left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
-	// var top = rect.bottom + 6;
-	// if (top + height > window.innerHeight - 8) {
-	// 	top = Math.max(8, rect.top - height - 6);
-	// }
-	// pop.style.left = left + 'px';
-	// pop.style.top = top + 'px';
 }
 
 function wpchOpenComment(index) {
@@ -68,7 +45,6 @@ function wpchOpenComment(index) {
 	}
 
 	pop.showPopover();
-	wpchPositionCommentPopover(pop, index);
 	wpchScrollThread(index);
 
 	wpchOpenCommentIndex = index;
@@ -82,22 +58,10 @@ function wpchOpenComment(index) {
 
 	// Re-render the thread as currently stored — this page may have been
 	// loaded long before the popover was opened.
-	var data = new FormData();
-	data.set('action', 'wpch_comment_fetch');
-	data.set('_wpnonce', wpchGetManageNonce());
-	data.set('index', index);
-
-	fetch(ajaxurl, {
-		method: 'POST',
-		credentials: 'same-origin',
-		body: data,
-	})
-		.then(function (r) {
-			return r.json();
-		})
-		.then(function (res) {
-			if (res.success && wpchOpenCommentIndex === index) {
-				wpchApplyThread(index, res.data);
+	wpchPost('wpch_comment_fetch', { index: index })
+		.then(function (data) {
+			if (wpchOpenCommentIndex === index) {
+				wpchApplyThread(index, data);
 			}
 		})
 		.catch(function () {
@@ -202,39 +166,21 @@ function wpchSendComment(index, parent) {
 	}
 	area.disabled = true;
 
-	var data = new FormData();
-	data.set('action', 'wpch_comment_add');
-	data.set('_wpnonce', wpchGetManageNonce());
-	data.set('index', index);
-	data.set('parent', parent);
-	data.set('text', text);
-
-	fetch(ajaxurl, {
-		method: 'POST',
-		credentials: 'same-origin',
-		body: data,
-	})
-		.then(function (r) {
-			return r.json();
-		})
-		.then(function (res) {
+	wpchPost('wpch_comment_add', { index: index, parent: parent, text: text })
+		.then(function (data) {
 			area.disabled = false;
-			if (!res.success) {
-				alert((res.data && res.data.message) || 'Could not post the comment.');
-				return;
-			}
 			area.value = '';
 			// A reply composer is inside the thread and about to be replaced
 			// by the fresh render (which ships composers hidden and empty);
 			// the main composer persists and just gets cleared above.
-			wpchApplyThread(index, res.data);
+			wpchApplyThread(index, data);
 			if (!parent) {
 				area.focus();
 			}
 		})
-		.catch(function () {
+		.catch(function (err) {
 			area.disabled = false;
-			alert('Could not post the comment. Please try again.');
+			alert(err.message || 'Could not post the comment. Please try again.');
 		});
 }
 
@@ -243,29 +189,12 @@ function wpchDeleteComment(index, commentId) {
 		return;
 	}
 
-	var data = new FormData();
-	data.set('action', 'wpch_comment_delete');
-	data.set('_wpnonce', wpchGetManageNonce());
-	data.set('index', index);
-	data.set('comment_id', commentId);
-
-	fetch(ajaxurl, {
-		method: 'POST',
-		credentials: 'same-origin',
-		body: data,
-	})
-		.then(function (r) {
-			return r.json();
+	wpchPost('wpch_comment_delete', { index: index, comment_id: commentId })
+		.then(function (data) {
+			wpchApplyThread(index, data);
 		})
-		.then(function (res) {
-			if (!res.success) {
-				alert((res.data && res.data.message) || 'Could not delete the comment.');
-				return;
-			}
-			wpchApplyThread(index, res.data);
-		})
-		.catch(function () {
-			alert('Could not delete the comment. Please try again.');
+		.catch(function (err) {
+			alert(err.message || 'Could not delete the comment. Please try again.');
 		});
 }
 

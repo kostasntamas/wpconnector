@@ -18,7 +18,7 @@ class WPCE_Settings_Page
 	public function render()
 	{
 		if (isset($_POST['wpce_key']) && check_admin_referer('wpce_save_key')) {
-			update_option('wpce_secret_key', sanitize_text_field($_POST['wpce_key']));
+			update_option('wpce_secret_key', sanitize_text_field(wp_unslash($_POST['wpce_key'])));
 		}
 
 		$key          = get_option('wpce_secret_key');
@@ -34,7 +34,7 @@ class WPCE_Settings_Page
 			<form method="post">
 				<?php wp_nonce_field('wpce_save_key'); ?>
 				<p>
-					<label for="wpce_key" style="display:inline-block;width:100px;">Endpoint:</label>
+					<span style="display:inline-block;width:100px;">Endpoint:</span>
 					<code><?php echo esc_html($endpoint); ?></code>
 				</p>
 				<p>

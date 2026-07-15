@@ -111,9 +111,13 @@ class WPCH_Status_Checker
 			$request_options          = $options;
 			$request_options['hooks'] = $this->ssl_hooks($skip_verify, $cainfo);
 
+			// The key travels as a header rather than ?key= so it never lands
+			// in the remote server's access logs; the endpoint's permission
+			// check accepts both.
 			$base_url     = strtok(rtrim($endpoint['url'], '/'), '?');
 			$requests[$i] = [
-				'url'     => add_query_arg('key', $endpoint['key'], $base_url),
+				'url'     => $base_url,
+				'headers' => ['x-wpconnector-key' => $endpoint['key']],
 				'type'    => \WpOrg\Requests\Requests::GET,
 				'options' => $request_options,
 			];
