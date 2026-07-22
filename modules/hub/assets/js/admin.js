@@ -227,13 +227,17 @@ document.addEventListener('click', function (e) {
 		});
 });
 
-// Posts wpch_refresh_statuses (all rows, or just one when index is given),
+// Posts wpch_refresh_statuses — every row if called with no arguments, just
+// one when index is given (per-row refresh buttons), or a specific set when
+// indexes is given (the global Refresh button, driven in batches by the
+// DOMContentLoaded handler below so it can show a running "X of Y" count) —
 // swaps the returned row HTML in place and re-renders the health tabs.
-// Shared by the global Refresh button and the per-row refresh buttons.
-function wpchRefreshStatuses(index) {
+function wpchRefreshStatuses(index, indexes) {
 	var fields = {};
 	if (index !== undefined && index !== null && index !== '') {
 		fields.index = index;
+	} else if (indexes !== undefined && indexes !== null) {
+		fields.indexes = JSON.stringify(indexes);
 	}
 
 	return wpchPost('wpch_refresh_statuses', fields)
@@ -252,6 +256,11 @@ function wpchRefreshStatuses(index) {
 		});
 }
 
+// Endpoints fired per wpch_refresh_statuses call from the global Refresh
+// button — matches WPCH_Status_Checker::BATCH_SIZE so one client batch is
+// exactly one curl_multi batch server-side, with no further internal split.
+var WPCH_REFRESH_BATCH_SIZE = 8;
+
 document.addEventListener('DOMContentLoaded', function () {
 	var refreshBtn = document.getElementById('wpch-refresh-btn');
 	if (!refreshBtn) {
@@ -260,10 +269,37 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	refreshBtn.addEventListener('click', function () {
 		var btn = this;
-		btn.disabled = true;
-		btn.textContent = 'Refreshing…';
+		// Read from the DOM rather than a stored count: it's already the
+		// source of truth for which rows exist, and matches server-side
+		// indexes 1:1 (see render_endpoint_row()).
+		var indexes = Array.prototype.map.call(document.querySelectorAll('.refresh-row'), function (el) {
+			return el.getAttribute('data-index');
+		});
 
-		wpchRefreshStatuses().finally(function () {
+		if (!indexes.length) {
+			return;
+		}
+
+		var batches = [];
+		for (var i = 0; i < indexes.length; i += WPCH_REFRESH_BATCH_SIZE) {
+			batches.push(indexes.slice(i, i + WPCH_REFRESH_BATCH_SIZE));
+		}
+
+		btn.disabled = true;
+		var done = 0;
+		btn.textContent = 'Refreshing 0 of ' + indexes.length + '…';
+
+		var chain = Promise.resolve();
+		batches.forEach(function (batch) {
+			chain = chain.then(function () {
+				return wpchRefreshStatuses(null, batch).then(function () {
+					done += batch.length;
+					btn.textContent = 'Refreshing ' + done + ' of ' + indexes.length + '…';
+				});
+			});
+		});
+
+		chain.finally(function () {
 			btn.disabled = false;
 			btn.textContent = 'Refresh';
 		});

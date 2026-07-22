@@ -871,7 +871,7 @@ class WPCH_Admin_Page
 								<option value="">All</option>
 							</select>
 						</label>
-						<span class="wpch-search-count" id="wpch-filter-count"></span>
+						<span class="wpch-search-count" style="margin-left: 1.5ch;" id="wpch-filter-count"></span>
 					</div>
 				</div>
 				<?php foreach ($groups as $label => $rows) : ?>
@@ -1151,7 +1151,7 @@ class WPCH_Admin_Page
 						?>
 						<dialog id="wpch-search" class="wpch-search">
 							<input type="text" id="wpch-search-input" placeholder="Filter sites by domain.." autocomplete="off">
-							<span class="wpch-search-count" id="wpch-search-count"></span>
+							<span style="margin-left: 1.5ch;" class="wpch-search-count" id="wpch-search-count"></span>
 							<em style="font-size:smaller; opacity: .65; margin: auto; margin-left: 1.5ch;"><kbd>Enter</kbd> keeps the filter | <kbd>Esc</kbd> clears</em>
 						</dialog>
 						<?php

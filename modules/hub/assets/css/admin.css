@@ -421,7 +421,7 @@ td strong {
 	color: contrast-color(var(--tag-color));
 	background: var(--tag-color, #666);
 	border-radius: var(--radius-s);
-	border: 2px solid color-mix(in hsl, var(--tag-color), #979797);
+	/* border: 2px solid color-mix(in hsl, var(--tag-color), #979797); */
 }
 
 /* --- Comment chat popover (comments.js positions it next to the row's

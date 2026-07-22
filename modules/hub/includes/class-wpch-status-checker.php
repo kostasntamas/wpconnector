@@ -16,6 +16,13 @@ class WPCH_Status_Checker
 	// site 'deprecated', which lands it in the Needs Attention tab.
 	const MAX_HEALTHY_WP_GAP = 3;
 
+	// Max endpoints fired as a single curl_multi parallel batch. Firing an
+	// entire long endpoint list at once makes the requests contend for local
+	// CPU/bandwidth/DNS hard enough that individual requests can blow well
+	// past their own 'timeout' budget before curl gets a chance to notice and
+	// abort them — see request_in_batches().
+	const BATCH_SIZE = 8;
+
 	// Per-endpoint fetch metadata for the most recent fetch_statuses() call,
 	// keyed like its input array: ['duration' => float|null seconds,
 	// 'cached' => bool, 'fetched_at' => unix time].
@@ -67,8 +74,8 @@ class WPCH_Status_Checker
 		$cainfo = ABSPATH . WPINC . '/certificates/ca-bundle.crt';
 
 		$options = [
-			'timeout'         => 6,
-			'connect_timeout' => 3,
+			'timeout'         => 10,
+			'connect_timeout' => 4,
 			'verify'          => $skip_verify ? false : $cainfo,
 		];
 
@@ -127,28 +134,29 @@ class WPCH_Status_Checker
 			return $statuses;
 		}
 
-		// The batch start doubles as every request's start time: with the curl
-		// transport the requests run in parallel, so each one's completion time
-		// minus the batch start ≈ how long that endpoint actually took. On the
-		// serial fsockopen fallback the numbers come out cumulative — which is
-		// exactly the stacking worth seeing when diagnosing slow loads.
+		// Each chunk's start doubles as every request in that chunk's start
+		// time: with
+		// the curl transport the requests within a chunk run in parallel, so
+		// each one's completion time minus its chunk's start ≈ how long that
+		// endpoint actually took (not counting time spent queued behind
+		// earlier chunks). On the serial fsockopen fallback the numbers come
+		// out cumulative within a chunk — which is exactly the stacking worth
+		// seeing when diagnosing slow loads. $chunk_start is passed by
+		// reference so request_in_batches() can update it before each chunk.
 		$durations   = [];
-		$start       = microtime(true);
-		$on_complete = function ($response, $id) use (&$durations, $start) {
-			$durations[$id] = round(microtime(true) - $start, 2);
+		$chunk_start = microtime(true);
+		$on_complete = function ($response, $id) use (&$durations, &$chunk_start) {
+			$durations[$id] = round(microtime(true) - $chunk_start, 2);
 		};
 
-		$responses = \WpOrg\Requests\Requests::request_multiple($requests, [
-			'complete' => $on_complete,
-		]);
+		$responses = $this->request_in_batches($requests, $on_complete, $chunk_start);
 
 		// Transport-level failures (timeouts, dropped handshakes) get one
-		// retry: a forced refresh fires the whole list as a single parallel
-		// batch, and on a long list that contention alone can push a few slow
-		// sites past the timeout — rerunning just the failures happens without
-		// the crowd. Sites that are actually down simply fail twice, at the
-		// cost of one extra timeout wait. HTTP-level errors (a 404, a 500) are
-		// real answers from the site and are not retried.
+		// retry: rerunning just the failures happens without the crowd of
+		// everything that already succeeded. Sites that are actually down
+		// simply fail twice, at the cost of one extra timeout wait. HTTP-level
+		// errors (a 404, a 500) are real answers from the site and are not
+		// retried.
 		$retry = [];
 		foreach ($responses as $i => $response) {
 			if ($response instanceof \WpOrg\Requests\Response) {
@@ -160,9 +168,7 @@ class WPCH_Status_Checker
 			$retry[$i]['options']['hooks'] = $this->ssl_hooks($skip_verify, $cainfo);
 		}
 		if (! empty($retry)) {
-			$retried = \WpOrg\Requests\Requests::request_multiple($retry, [
-				'complete' => $on_complete,
-			]);
+			$retried = $this->request_in_batches($retry, $on_complete, $chunk_start);
 			foreach ($retried as $i => $response) {
 				$responses[$i] = $response;
 			}
@@ -204,6 +210,27 @@ class WPCH_Status_Checker
 		}
 
 		return $statuses;
+	}
+
+	// Runs $requests (keyed like fetch_statuses()'s input) through curl_multi
+	// in fixed-size chunks (self::BATCH_SIZE) instead of one giant parallel
+	// batch. $chunk_start is a by-ref float, reset to the current time before
+	// each chunk so the caller's 'complete' callback can measure a request
+	// against its own chunk's start rather than queueing time from earlier
+	// chunks.
+	private function request_in_batches(array $requests, callable $on_complete, &$chunk_start): array
+	{
+		$responses = [];
+		foreach (array_chunk($requests, self::BATCH_SIZE, true) as $chunk) {
+			$chunk_start      = microtime(true);
+			$chunk_responses  = \WpOrg\Requests\Requests::request_multiple($chunk, [
+				'complete' => $on_complete,
+			]);
+			foreach ($chunk_responses as $i => $response) {
+				$responses[$i] = $response;
+			}
+		}
+		return $responses;
 	}
 
 	// Hooks carrying the curl SSL setup that request_multiple() drops on the

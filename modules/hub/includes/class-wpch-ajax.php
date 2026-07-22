@@ -364,22 +364,46 @@ class WPCH_Ajax
 		$endpoints = $this->endpoints->get_all();
 
 		// A non-negative 'index' refreshes just that row (the per-row refresh
-		// button): only it is force-fetched, everything else renders from the
-		// cache — the health tabs still need every site's status to regroup.
-		$index = isset($_POST['index']) && '' !== $_POST['index'] ? (int) $_POST['index'] : -1;
-		if ($index >= 0 && ! isset($endpoints[$index])) {
-			wp_send_json_error(['message' => 'Site not found.']);
+		// button). A JSON 'indexes' array refreshes just that set of rows (the
+		// global Refresh button, driven client-side in batches so the UI can
+		// show a running "X of Y" count — see wpchRefreshStatuses() in
+		// admin.js). Either way, only the targeted rows are force-fetched;
+		// everything else renders from the cache so the health tabs can still
+		// regroup using every site's status.
+		$indexes = [];
+		if (isset($_POST['indexes'])) {
+			$decoded = json_decode(wp_unslash($_POST['indexes']), true);
+			if (is_array($decoded)) {
+				foreach ($decoded as $raw) {
+					$i = (int) $raw;
+					if (isset($endpoints[$i])) {
+						$indexes[] = $i;
+					}
+				}
+			}
+		} elseif (isset($_POST['index']) && '' !== $_POST['index']) {
+			$index = (int) $_POST['index'];
+			if (! isset($endpoints[$index])) {
+				wp_send_json_error(['message' => 'Site not found.']);
+			}
+			$indexes = [$index];
 		}
 
-		if ($index >= 0) {
-			// The target row is left out of the unforced batch so it isn't
-			// fetched twice when its cache entry has expired.
+		if (! empty($indexes)) {
+			// The targeted rows are left out of the unforced batch so they
+			// aren't fetched twice when their cache entry has expired.
 			$others = $endpoints;
-			unset($others[$index]);
-			$statuses          = $this->status_checker->fetch_statuses($others);
-			$forced            = $this->status_checker->fetch_statuses([$index => $endpoints[$index]], true);
-			$statuses[$index]  = $forced[$index];
-			$render_indexes    = [$index];
+			$target = [];
+			foreach ($indexes as $i) {
+				$target[$i] = $endpoints[$i];
+				unset($others[$i]);
+			}
+			$statuses = $this->status_checker->fetch_statuses($others);
+			$forced   = $this->status_checker->fetch_statuses($target, true);
+			foreach ($indexes as $i) {
+				$statuses[$i] = $forced[$i];
+			}
+			$render_indexes = $indexes;
 		} else {
 			$statuses       = $this->status_checker->fetch_statuses($endpoints, true);
 			$render_indexes = array_keys($endpoints);

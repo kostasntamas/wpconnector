@@ -1,59 +1,28 @@
 @font-face {
-	font-family: 'Poppins';
-	src:
-		local('Poppins Black'),
-		local('Poppins-Black'),
-		url('Poppins-Black.woff2') format('woff2'),
-		url('Poppins-Black.woff') format('woff');
-	font-weight: 900;
-	font-style: normal;
-	font-display: swap;
+    font-family: 'Google Sans';
+    src: local('Google Sans Regular'), local('GoogleSans-Regular'),
+        url('GoogleSans-Regular.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
 }
 
 @font-face {
-	font-family: 'Poppins';
-	src:
-		local('Poppins Bold'),
-		local('Poppins-Bold'),
-		url('Poppins-Bold.woff2') format('woff2'),
-		url('Poppins-Bold.woff') format('woff');
-	font-weight: bold;
-	font-style: normal;
-	font-display: swap;
+    font-family: 'Google Sans';
+    src: local('Google Sans Medium'), local('GoogleSans-Medium'),
+        url('GoogleSans-Medium.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
 }
 
 @font-face {
-	font-family: 'Poppins';
-	src:
-		local('Poppins Light'),
-		local('Poppins-Light'),
-		url('Poppins-Light.woff2') format('woff2'),
-		url('Poppins-Light.woff') format('woff');
-	font-weight: 300;
-	font-style: normal;
-	font-display: swap;
+    font-family: 'Google Sans';
+    src: local('Google Sans Bold'), local('GoogleSans-Bold'),
+        url('GoogleSans-Bold.woff2') format('woff2');
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
 }
 
-@font-face {
-	font-family: 'Poppins';
-	src:
-		local('Poppins Medium'),
-		local('Poppins-Medium'),
-		url('Poppins-Medium.woff2') format('woff2'),
-		url('Poppins-Medium.woff') format('woff');
-	font-weight: 500;
-	font-style: normal;
-	font-display: swap;
-}
 
-@font-face {
-	font-family: 'Poppins';
-	src:
-		local('Poppins Regular'),
-		local('Poppins-Regular'),
-		url('Poppins-Regular.woff2') format('woff2'),
-		url('Poppins-Regular.woff') format('woff');
-	font-weight: normal;
-	font-style: normal;
-	font-display: swap;
-}
