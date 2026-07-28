@@ -1,21 +1,21 @@
 // JS IS ONLY FOR THE DRAG AND DROP
 (function () {
-	var table = document.getElementById('wpch-status-table');
+	const table = document.getElementById('wpch-status-table');
 	if (!table) {
 		return;
 	}
 
-	var dragType = null; // "row" | "folder"
-	var draggedRow = null;
-	var draggedFolder = null;
-	var pendingHandle = null; // set on mousedown, consumed by the next dragstart
-	var didMove = false;
-	var rafId = 0;
-	var lastX = 0;
-	var lastY = 0;
-	var lastTbody = null; // last valid <tbody> hovered during a row drag
-	var scrollRafId = 0;
-	var SCROLL_MARGIN = 80; // px from the viewport edge where drag auto-scroll kicks in
+	let dragType = null; // "row" | "folder"
+	let draggedRow = null;
+	let draggedFolder = null;
+	let pendingHandle = null; // set on mousedown, consumed by the next dragstart
+	let didMove = false;
+	let rafId = 0;
+	let lastX = 0;
+	let lastY = 0;
+	let lastTbody = null; // last valid <tbody> hovered during a row drag
+	let scrollRafId = 0;
+	const SCROLL_MARGIN = 80; // px from the viewport edge where drag auto-scroll kicks in
 
 	// The <tr>/<tbody> themselves carry draggable="true" (so the whole row/folder
 	// moves as one native drag payload), so dragstart always targets them, never
@@ -35,7 +35,7 @@
 			// folders worked. On press the layout settles first; the drag then
 			// starts on an already-small, stable block. The handle sits in the
 			// header ABOVE the folded rows, so the press point doesn't move.
-			var grabbed = e.target.closest('tbody');
+			const grabbed = e.target.closest('tbody');
 			if (grabbed) {
 				grabbed.classList.add('drag-collapsed');
 			}
@@ -62,7 +62,7 @@
 		lastTbody = null;
 
 		if (pendingHandle === 'row') {
-			var row = e.target.closest('tr');
+			const row = e.target.closest('tr');
 			if (!row) {
 				e.preventDefault();
 				return;
@@ -71,7 +71,7 @@
 			draggedRow = row;
 			draggedRow.classList.add('dragging');
 		} else if (pendingHandle === 'folder') {
-			var folder = e.target.closest('tbody');
+			const folder = e.target.closest('tbody');
 			if (!folder) {
 				e.preventDefault();
 				return;
@@ -85,7 +85,7 @@
 			// By default the browser rasterizes the ENTIRE <tbody> as the drag
 			// image — on a big folder that snapshot freezes the page for seconds.
 			// Use just the header row instead.
-			var header = folder.querySelector('.parent-row');
+			const header = folder.querySelector('.parent-row');
 			if (header && e.dataTransfer && typeof e.dataTransfer.setDragImage === 'function') {
 				e.dataTransfer.setDragImage(header, 20, header.offsetHeight / 2);
 			}
@@ -128,7 +128,7 @@
 		lastX = e.clientX;
 		lastY = e.clientY;
 		if (dragType === 'row' && e.target && e.target.closest) {
-			var tbody = e.target.closest('tbody');
+			const tbody = e.target.closest('tbody');
 			// Ignore collapsed groups: dropping into one would hide the dragged
 			// row mid-drag (its child rows are display:none).
 			if (tbody && tbody.parentNode === table && !isCollapsed(tbody)) {
@@ -157,7 +157,7 @@
 			return;
 		}
 
-		var step = 0;
+		let step = 0;
 		if (lastY < SCROLL_MARGIN) {
 			step = -Math.min(25, Math.ceil((SCROLL_MARGIN - lastY) / 3));
 		} else if (lastY > window.innerHeight - SCROLL_MARGIN) {
@@ -169,8 +169,8 @@
 			// The table just shifted under a stationary pointer: re-resolve the
 			// hovered tbody and re-run positioning so the drag keeps following.
 			if (dragType === 'row') {
-				var el = document.elementFromPoint(lastX, lastY);
-				var tbody = el && el.closest ? el.closest('tbody') : null;
+				const el = document.elementFromPoint(lastX, lastY);
+				const tbody = el && el.closest ? el.closest('tbody') : null;
 				if (tbody && tbody.parentNode === table && !isCollapsed(tbody)) {
 					lastTbody = tbody;
 				}
@@ -192,8 +192,8 @@
 
 		if (draggedRow) {
 			draggedRow.classList.remove('dragging');
-			var tbody = draggedRow.closest('tbody');
-			var folderId = tbody && tbody.classList.contains('folder') ? tbody.dataset.folderId : '';
+			const tbody = draggedRow.closest('tbody');
+			const folderId = tbody && tbody.classList.contains('folder') ? tbody.dataset.folderId : '';
 			setRowFolder(draggedRow, folderId);
 		}
 		if (draggedFolder) {
@@ -220,7 +220,7 @@
 		rafId = 0;
 
 		if (dragType === 'row' && draggedRow && lastTbody) {
-			var afterRow = getAfterRow(lastTbody, lastY);
+			const afterRow = getAfterRow(lastTbody, lastY);
 			// Already in place — leave the DOM alone (re-inserting the row on
 			// every frame causes constant reflow and drag thrash).
 			if (draggedRow.parentNode === lastTbody && draggedRow.nextElementSibling === (afterRow || null)) {
@@ -233,7 +233,7 @@
 			}
 			didMove = true;
 		} else if (dragType === 'folder' && draggedFolder) {
-			var afterFolder = getAfterFolder(lastY);
+			const afterFolder = getAfterFolder(lastY);
 			if (draggedFolder.nextElementSibling === (afterFolder || null)) {
 				return;
 			}
@@ -247,30 +247,30 @@
 	}
 
 	function isCollapsed(tbody) {
-		var toggle = tbody.querySelector('.parent-row input[type="checkbox"]');
+		const toggle = tbody.querySelector('.parent-row input[type="checkbox"]');
 		return !!(toggle && !toggle.checked);
 	}
 
 	// Only the hidden input changes — every row keeps the child-row class
 	// regardless of grouping (the markup hard-codes it for uniform styling).
 	function setRowFolder(row, folderId) {
-		var folderInput = row.querySelector('input[type="hidden"][name$="[folder_id]"]');
+		const folderInput = row.querySelector('input[type="hidden"][name$="[folder_id]"]');
 		if (folderInput) {
 			folderInput.value = folderId || '';
 		}
 	}
 
 	function getAfterRow(container, y) {
-		var rows = [].slice.call(container.querySelectorAll('tr:not(.parent-row):not(.dragging)'));
+		const rows = [].slice.call(container.querySelectorAll('tr:not(.parent-row):not(.dragging)'));
 
 		return rows.reduce(
 			function (closest, child) {
-				var box = child.getBoundingClientRect();
+				const box = child.getBoundingClientRect();
 				if (!box.height) {
 					// Hidden (collapsed) rows have empty rects and poison the math.
 					return closest;
 				}
-				var offset = y - box.top - box.height / 2;
+				const offset = y - box.top - box.height / 2;
 				if (offset < 0 && offset > closest.offset) {
 					return {
 						offset: offset,
@@ -286,12 +286,12 @@
 	}
 
 	function getAfterFolder(y) {
-		var folders = [].slice.call(table.querySelectorAll(':scope > tbody:not(.dragging-folder)'));
+		const folders = [].slice.call(table.querySelectorAll(':scope > tbody:not(.dragging-folder)'));
 
 		return folders.reduce(
 			function (closest, body) {
-				var box = body.getBoundingClientRect();
-				var offset = y - box.top - box.height / 2;
+				const box = body.getBoundingClientRect();
+				const offset = y - box.top - box.height / 2;
 				if (offset < 0 && offset > closest.offset) {
 					return {
 						offset: offset,
@@ -310,14 +310,14 @@
 	// DOM order (the server rewrites each endpoint's 'order' field from it),
 	// plus the folder block sequence for the wpch_folders option.
 	function persistOrder() {
-		var rows = [].slice.call(table.querySelectorAll(':scope > tbody > tr:not(.parent-row)')).map(function (row) {
-			var folderInput = row.querySelector('input[type="hidden"][name$="[folder_id]"]');
+		const rows = [].slice.call(table.querySelectorAll(':scope > tbody > tr:not(.parent-row)')).map(function (row) {
+			const folderInput = row.querySelector('input[type="hidden"][name$="[folder_id]"]');
 			return {
 				id: row.dataset.id || '',
 				folder_id: folderInput ? folderInput.value : '',
 			};
 		});
-		var folderIds = [].slice.call(table.querySelectorAll(':scope > tbody.folder')).map(function (tb) {
+		const folderIds = [].slice.call(table.querySelectorAll(':scope > tbody.folder')).map(function (tb) {
 			return tb.dataset.folderId;
 		});
 

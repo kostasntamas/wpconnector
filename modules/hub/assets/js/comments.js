@@ -11,16 +11,16 @@
 //
 // Depends on wpchPost() from admin.js (handle wpch-admin).
 
-var wpchOpenCommentIndex = null; // row index of the open popover, or null
-var wpchOpenCommentEndpointId = null; // that row's endpoint id, for heartbeat
+let wpchOpenCommentIndex = null; // row index of the open popover, or null
+let wpchOpenCommentEndpointId = null; // that row's endpoint id, for heartbeat
 
 function wpchRowEndpointId(index) {
-	var row = document.getElementById('wpch-row-' + index);
+	const row = document.getElementById('wpch-row-' + index);
 	return row ? row.getAttribute('data-id') : '';
 }
 
 function wpchOpenComment(index) {
-	var pop = document.getElementById('wpch-comment-popover-' + index);
+	const pop = document.getElementById('wpch-comment-popover-' + index);
 	if (!pop) {
 		return;
 	}
@@ -73,7 +73,7 @@ function wpchOpenComment(index) {
 // Swaps in a fresh server render of the thread and syncs everything derived
 // from it (revision stamp, button badge, scroll position).
 function wpchApplyThread(index, data) {
-	var thread = document.getElementById('wpch-comment-thread-' + index);
+	const thread = document.getElementById('wpch-comment-thread-' + index);
 	if (!thread) {
 		return;
 	}
@@ -84,19 +84,19 @@ function wpchApplyThread(index, data) {
 }
 
 function wpchScrollThread(index) {
-	var thread = document.getElementById('wpch-comment-thread-' + index);
+	const thread = document.getElementById('wpch-comment-thread-' + index);
 	if (thread) {
 		thread.scrollTop = thread.scrollHeight;
 	}
 }
 
 function wpchUpdateCommentCount(index, count) {
-	var row = document.getElementById('wpch-row-' + index);
-	var btn = row ? row.querySelector('.comment-btn') : null;
+	const row = document.getElementById('wpch-row-' + index);
+	const btn = row ? row.querySelector('.comment-btn') : null;
 	if (!btn) {
 		return;
 	}
-	var badge = btn.querySelector('.wpch-comment-count');
+	let badge = btn.querySelector('.wpch-comment-count');
 	if (count > 0) {
 		if (!badge) {
 			badge = document.createElement('span');
@@ -113,15 +113,15 @@ function wpchUpdateCommentCount(index, count) {
 // or focus) — heartbeat refreshes skip the swap then, since re-rendering the
 // thread would wipe the draft.
 function wpchThreadHasDraft(index) {
-	var thread = document.getElementById('wpch-comment-thread-' + index);
+	const thread = document.getElementById('wpch-comment-thread-' + index);
 	if (!thread) {
 		return false;
 	}
 	if (thread.contains(document.activeElement)) {
 		return true;
 	}
-	var areas = thread.querySelectorAll('textarea');
-	for (var k = 0; k < areas.length; k++) {
+	const areas = thread.querySelectorAll('textarea');
+	for (let k = 0; k < areas.length; k++) {
 		if (areas[k].value.trim() !== '') {
 			return true;
 		}
@@ -130,13 +130,13 @@ function wpchThreadHasDraft(index) {
 }
 
 function wpchToggleReply(index, commentId) {
-	var composer = document.getElementById('wpch-reply-composer-' + index + '-' + commentId);
+	const composer = document.getElementById('wpch-reply-composer-' + index + '-' + commentId);
 	if (!composer) {
 		return;
 	}
 	composer.hidden = !composer.hidden;
 	if (!composer.hidden) {
-		var area = composer.querySelector('textarea');
+		const area = composer.querySelector('textarea');
 		if (area) {
 			area.focus();
 		}
@@ -154,13 +154,13 @@ function wpchComposerKeydown(e, index, parent) {
 // parent = '' posts a top-level message (main composer), otherwise a reply to
 // that top-level comment (its inline composer).
 function wpchSendComment(index, parent) {
-	var area = parent
+	const area = parent
 		? document.getElementById('wpch-reply-input-' + index + '-' + parent)
 		: document.getElementById('wpch-comment-input-' + index);
 	if (!area) {
 		return;
 	}
-	var text = area.value.trim();
+	const text = area.value.trim();
 	if (!text || area.disabled) {
 		return;
 	}
@@ -207,7 +207,7 @@ if (window.jQuery) {
 		// element without firing its toggle event — drop the stale session
 		// instead of polling for a popover nobody sees.
 		if (wpchOpenCommentIndex !== null) {
-			var pop = document.getElementById('wpch-comment-popover-' + wpchOpenCommentIndex);
+			const pop = document.getElementById('wpch-comment-popover-' + wpchOpenCommentIndex);
 			if (!pop || !pop.matches(':popover-open')) {
 				wpchOpenCommentIndex = null;
 				wpchOpenCommentEndpointId = null;
@@ -222,12 +222,12 @@ if (window.jQuery) {
 	});
 
 	jQuery(document).on('heartbeat-tick.wpch', function (e, data) {
-		var payload = data && data.wpch_comment_thread;
+		const payload = data && data.wpch_comment_thread;
 		if (!payload || wpchOpenCommentIndex === null || payload.endpoint_id !== wpchOpenCommentEndpointId) {
 			return;
 		}
-		var index = wpchOpenCommentIndex;
-		var thread = document.getElementById('wpch-comment-thread-' + index);
+		const index = wpchOpenCommentIndex;
+		const thread = document.getElementById('wpch-comment-thread-' + index);
 		if (!thread || thread.getAttribute('data-rev') === payload.rev || wpchThreadHasDraft(index)) {
 			return;
 		}

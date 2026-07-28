@@ -3,21 +3,21 @@
 // open/closed persistence of the collapsible folder groups.
 
 function wpchFolderChoiceChanged(select, suffix) {
-	var newBox = document.getElementById('wpch-new-folder-' + suffix);
-	var recolorBox = document.getElementById('wpch-recolor-' + suffix);
-	var value = select.value;
+	const newBox = document.getElementById('wpch-new-folder-' + suffix);
+	const recolorBox = document.getElementById('wpch-recolor-' + suffix);
+	const value = select.value;
 
 	if (newBox) {
 		newBox.style.display = '__new__' === value ? '' : 'none';
 	}
 
 	if (recolorBox) {
-		var showRecolor = '' !== value && '__new__' !== value;
+		const showRecolor = '' !== value && '__new__' !== value;
 		recolorBox.style.display = showRecolor ? '' : 'none';
 
 		if (showRecolor) {
-			var color = select.options[select.selectedIndex].getAttribute('data-color');
-			var radio = color ? recolorBox.querySelector('input[value="' + color + '"]') : null;
+			const color = select.options[select.selectedIndex].getAttribute('data-color');
+			const radio = color ? recolorBox.querySelector('input[value="' + color + '"]') : null;
 			if (radio) {
 				radio.checked = true;
 			}
@@ -30,7 +30,7 @@ function wpchFolderChoiceChanged(select, suffix) {
 // toggle is persisted through wp_ajax_wpch_folder_state — so the layout
 // follows the account across browsers and devices, not just this browser.
 document.addEventListener('change', function (e) {
-	var checkbox = e.target;
+	const checkbox = e.target;
 	if (!checkbox.id || checkbox.id.indexOf('wpch-folder-toggle-') !== 0) {
 		return;
 	}

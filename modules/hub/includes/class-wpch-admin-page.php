@@ -639,7 +639,17 @@ class WPCH_Admin_Page
 	{
 	?>
 		<td>
-			<div style="display: flex;align-items: center;text-wrap: nowrap;gap: 1ch;justify-content: center;"><?php echo esc_html($status['wp_version']); ?> <span style="color:<?php echo esc_attr($wp_status['color']); ?>;" <?php if (! empty($status['wp_update_available']) && ! empty($status['wp_latest_version'])) : ?>title="<?php echo esc_attr('Latest: ' . $status['wp_latest_version']); ?>" <?php endif; ?>>(<?php echo esc_html($wp_status['label']); ?>)</span></div>
+			<span style="display: flex; justify-content: center; gap: 1ch; align-items: center; color:<?php echo esc_attr($wp_status['color']); ?>;"
+				<?php if (! empty($status['wp_update_available']) && ! empty($status['wp_latest_version'])) : ?>
+				title="<?php echo esc_attr('Latest: ' . $status['wp_latest_version']); ?>"
+				<?php else: ?>
+				title="(<?php echo esc_html($wp_status['label']); ?>)"
+				<?php endif; ?>>
+				<?php echo esc_html($status['wp_version']); ?>
+				<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24">
+					<path fill="currentColor" d="M11 17h2v-6h-2zm1.713-8.287Q13 8.425 13 8t-.288-.712T12 7t-.712.288T11 8t.288.713T12 9t.713-.288M12 22q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22m0-2q3.35 0 5.675-2.325T20 12t-2.325-5.675T12 4T6.325 6.325T4 12t2.325 5.675T12 20m0-8" />
+				</svg>
+			</span>
 		</td>
 	<?php
 	}
@@ -650,7 +660,14 @@ class WPCH_Admin_Page
 	{
 		$short = self::php_short_version($status['php_version']);
 	?>
-		<td<?php if ($short !== $status['php_version']) : ?> title="<?php echo esc_attr($status['php_version']); ?>" <?php endif; ?>><?php echo esc_html($short); ?> <span style="color:<?php echo esc_attr($php_status['color']); ?>;">(<?php echo esc_html($php_status['label']); ?>)</span></td>
+		<td<?php if ($short !== $status['php_version']) : ?> title="<?php echo esc_attr($status['php_version']); ?>" <?php endif; ?>>
+			<span style="display: flex; align-items: center; justify-content: center; gap: 1ch;color:<?php echo esc_attr($php_status['color']); ?>;" title="(<?php echo esc_html($php_status['label']); ?>)">
+				<?php echo esc_html($short); ?>
+				<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24">
+					<path fill="currentColor" d="M11 17h2v-6h-2zm1.713-8.287Q13 8.425 13 8t-.288-.712T12 7t-.712.288T11 8t.288.713T12 9t.713-.288M12 22q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22m0-2q3.35 0 5.675-2.325T20 12t-2.325-5.675T12 4T6.325 6.325T4 12t2.325 5.675T12 20m0-8" />
+				</svg>
+			</span>
+			</td>
 		<?php
 	}
 
@@ -697,10 +714,17 @@ class WPCH_Admin_Page
 				<input type="hidden" name="endpoints[<?php echo esc_attr($i); ?>][folder_id]" value="<?php echo esc_attr($folder_id); ?>">
 				<?php $this->render_domain_cell($row_label, $row_label, $tag, ob_get_clean()); ?>
 				<td style="text-align: center;">
-					<span style="color:<?php echo esc_attr($health['color']); ?>;font-weight:bold;"><?php echo esc_html($health['label']); ?></span>
-					<?php if ($meta_bits) : ?>
+					<span style="display: flex; align-items: center; justify-content: center; gap: 1ch;color:<?php echo esc_attr($health['color']); ?>;font-weight:bold;"
+						<?php if ($meta_bits) : ?>
+						title="<?php echo esc_html(implode(' · ', $meta_bits)); ?> | How long this site's status check took. 'cached' means it's shown from the last check instead of a live request. Use Refresh for a live pull." <?php endif; ?>>
+						<?php echo esc_html($health['label']); ?>
+						<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24">
+							<path fill="currentColor" d="M11 17h2v-6h-2zm1.713-8.287Q13 8.425 13 8t-.288-.712T12 7t-.712.288T11 8t.288.713T12 9t.713-.288M12 22q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22m0-2q3.35 0 5.675-2.325T20 12t-2.325-5.675T12 4T6.325 6.325T4 12t2.325 5.675T12 20m0-8" />
+						</svg>
+					</span>
+					<?php /* if ($meta_bits) : ?>
 						<small class="wpch-fetch-meta" style="display:inline-flex; margin-left: 1ch;" title="How long this site's status check took. 'cached' means it's shown from the last check instead of a live request — use Refresh for a live pull."><?php echo esc_html(implode(' · ', $meta_bits)); ?></small>
-					<?php endif; ?>
+					<?php endif; */ ?>
 				</td>
 				<?php if ($is_error) : ?>
 					<td colspan="5" style="color:#b32d2e;">Error: <?php echo esc_html($status->get_error_message()); ?></td>
@@ -888,7 +912,7 @@ class WPCH_Admin_Page
 									<?php else : ?>
 										<th scope="col">WP Version</th>
 										<th scope="col">PHP Version</th>
-										<th scope="col">Plugins <em style="text-wrap: nowrap;font-size: .65em;">( total / active / inactive )</em></th>
+										<th scope="col"><span title="Total / Active / Inactive">Plugins</span></th>
 										<th scope="col">Auto Updates</th>
 									<?php endif; ?>
 								</tr>
@@ -1176,16 +1200,16 @@ class WPCH_Admin_Page
 									<table class="wpch-status-table" id="wpch-status-table">
 										<thead>
 											<tr>
-												<th scope="col" style="width: 45px;">#</th>
-												<th scope="col" style="width: 76px;">Login</th>
-												<th scope="col" style="width: 350px;">Domain</th>
-												<th scope="col" style="width: 270px;">Site Health</th>
-												<th scope="col" style="width: 140px;">WP Version</th>
-												<th scope="col" style="width: 110px;">PHP Version</th>
-												<th scope="col" style="width: 235px;">Plugins <em style="font-size: .65em">( total / active / inactive )</em></th>
-												<th scope="col" style="width: 140px;">Auto Updates</th>
-												<th scope="col" style="width: 90px;">Themes</th>
-												<th scope="col" style="width: 220px;">Settings</th>
+												<th scope="col" style="min-width: 45px;">#</th>
+												<th scope="col" style="min-width: 75px;">Login</th>
+												<th scope="col" style="min-width: 300px;">Domain</th>
+												<th scope="col" style="min-width: 220px;">Site Health</th>
+												<th scope="col" style="min-width: 130px;">WP Version</th>
+												<th scope="col" style="min-width: 110px;">PHP Version</th>
+												<th scope="col" style="min-width: 225px;"><span title="Total / Active / Inactive">Plugins</span></th>
+												<th scope="col" style="min-width: 160px;">Auto Updates</th>
+												<th scope="col" style="min-width: 90px;">Themes</th>
+												<th scope="col" style="min-width: 250px;">Settings</th>
 											</tr>
 										</thead>
 										<?php foreach ($sections as $section) : ?>

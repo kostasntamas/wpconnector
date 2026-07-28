@@ -73,7 +73,7 @@ button.button.close {
 	display: flex;
 	justify-content: flex-end;
 	align-items: center;
-	gap: 1em;
+	gap: 1.4rem;
 }
 
 .move,

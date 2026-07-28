@@ -4,7 +4,7 @@
 // draggable.js.
 
 function wpchGetManageNonce() {
-	var nonceField = document.querySelector('input[name="_wpnonce"]');
+	const nonceField = document.querySelector('input[name="_wpnonce"]');
 	return nonceField ? nonceField.value : '';
 }
 
@@ -15,7 +15,7 @@ function wpchGetManageNonce() {
 // the server's when it sent one, or '' on network/parse failures so callers
 // can fall back to their own text.
 function wpchPost(action, fields) {
-	var data = fields instanceof FormData ? fields : new FormData();
+	const data = fields instanceof FormData ? fields : new FormData();
 	if (fields && !(fields instanceof FormData)) {
 		Object.keys(fields).forEach(function (key) {
 			data.set(key, fields[key]);
@@ -46,18 +46,18 @@ function wpchPost(action, fields) {
 }
 
 function wpchSaveEndpointEdit(index) {
-	var dialog = document.getElementById('wpch-edit-dialog-' + index);
+	const dialog = document.getElementById('wpch-edit-dialog-' + index);
 	if (!dialog) {
 		return;
 	}
 
-	var urlInput = document.getElementById('wpch-edit-url-' + index);
-	var keyInput = document.getElementById('wpch-edit-key-' + index);
-	var loginInput = document.getElementById('wpch-edit-login-' + index);
-	var tagSelect = document.getElementById('wpch-edit-tag-' + index);
-	var folderSelect = dialog.querySelector('select[name="folder_choice"]');
+	const urlInput = document.getElementById('wpch-edit-url-' + index);
+	const keyInput = document.getElementById('wpch-edit-key-' + index);
+	const loginInput = document.getElementById('wpch-edit-login-' + index);
+	const tagSelect = document.getElementById('wpch-edit-tag-' + index);
+	const folderSelect = dialog.querySelector('select[name="folder_choice"]');
 
-	var fields = {
+	const fields = {
 		index: index,
 		edit_url: urlInput ? urlInput.value : '',
 		edit_key: keyInput ? keyInput.value : '',
@@ -73,14 +73,14 @@ function wpchSaveEndpointEdit(index) {
 		fields.folder_choice = folderSelect.value;
 
 		if ('__new__' === folderSelect.value) {
-			var nameInput = dialog.querySelector('input[name="new_folder_name"]');
-			var colorInput = dialog.querySelector('input[name="new_folder_color"]:checked');
+			const nameInput = dialog.querySelector('input[name="new_folder_name"]');
+			const colorInput = dialog.querySelector('input[name="new_folder_color"]:checked');
 			fields.new_folder_name = nameInput ? nameInput.value : '';
 			if (colorInput) {
 				fields.new_folder_color = colorInput.value;
 			}
 		} else if (folderSelect.value) {
-			var recolorInput = dialog.querySelector('input[name="recolor_folder_color"]:checked');
+			const recolorInput = dialog.querySelector('input[name="recolor_folder_color"]:checked');
 			if (recolorInput) {
 				fields.recolor_folder_color = recolorInput.value;
 			}
@@ -93,7 +93,7 @@ function wpchSaveEndpointEdit(index) {
 				window.location.reload();
 				return;
 			}
-			var row = document.getElementById('wpch-row-' + index);
+			const row = document.getElementById('wpch-row-' + index);
 			if (row) {
 				row.outerHTML = data.row_html;
 			}
@@ -108,21 +108,21 @@ function wpchSaveEndpointEdit(index) {
 // table's live DOM order, so both stay correct after drag-and-drop
 // reordering, inserts, and deletes — not just after a full page load.
 function wpchRenumberRows() {
-	var table = document.getElementById('wpch-status-table');
+	const table = document.getElementById('wpch-status-table');
 	if (!table) {
 		return;
 	}
 
-	var rows = table.querySelectorAll(':scope > tbody > tr:not(.parent-row)');
+	const rows = table.querySelectorAll(':scope > tbody > tr:not(.parent-row)');
 	rows.forEach(function (row, idx) {
-		var cell = row.querySelector('td:first-child');
+		const cell = row.querySelector('td:first-child');
 		if (cell) {
 			cell.textContent = idx + 1;
 		}
 	});
 
 	table.querySelectorAll(':scope > tbody').forEach(function (tbody) {
-		var countEl = tbody.querySelector('.parent-row .wpch-folder-count');
+		const countEl = tbody.querySelector('.parent-row .wpch-folder-count');
 		if (countEl) {
 			countEl.textContent = '(' + tbody.querySelectorAll('tr:not(.parent-row)').length + ')';
 		}
@@ -134,7 +134,7 @@ function wpchRenumberRows() {
 	// filters (Ctrl+K query + Tag/WP/PHP selects). Capture activity before the
 	// rebuild: it may clear a version filter whose value just disappeared, and
 	// the previously hidden rows still need one pass to unhide.
-	var wasActive = wpchFilterActive();
+	const wasActive = wpchFilterActive();
 	wpchRebuildVersionFilterOptions();
 	if (wasActive || wpchFilterActive()) {
 		wpchApplyFilters();
@@ -142,8 +142,8 @@ function wpchRenumberRows() {
 }
 
 function wpchInsertRow(data) {
-	var table = document.getElementById('wpch-status-table');
-	var targetBody = data.folder_id
+	const table = document.getElementById('wpch-status-table');
+	const targetBody = data.folder_id
 		? table.querySelector('tbody.folder[data-folder-id="' + data.folder_id + '"]')
 		: document.getElementById('wpch-tbody-ungrouped');
 
@@ -159,8 +159,8 @@ function wpchInsertRow(data) {
 }
 
 function wpchRemoveRow(index) {
-	var row = document.getElementById('wpch-row-' + index);
-	var tbody = row ? row.closest('tbody') : null;
+	const row = document.getElementById('wpch-row-' + index);
+	const tbody = row ? row.closest('tbody') : null;
 	if (row) {
 		row.remove();
 	}
@@ -178,7 +178,7 @@ document.addEventListener('submit', function (e) {
 	}
 	e.preventDefault();
 
-	var form = e.target;
+	const form = e.target;
 
 	wpchPost('wpch_add_endpoint', new FormData(form))
 		.then(function (data) {
@@ -189,7 +189,7 @@ document.addEventListener('submit', function (e) {
 			wpchInsertRow(data);
 			form.reset();
 			// The form lives in the sidebar's Add Site dialog — close it on success.
-			var dialog = form.closest('dialog');
+			const dialog = form.closest('dialog');
 			if (dialog && dialog.open) {
 				dialog.close();
 			}
@@ -200,20 +200,20 @@ document.addEventListener('submit', function (e) {
 });
 
 document.addEventListener('click', function (e) {
-	var link = e.target.closest('.wpch-delete-link');
+	const link = e.target.closest('.wpch-delete-link');
 	if (!link) {
 		return;
 	}
 	e.preventDefault();
 
-	var row = link.closest('tr');
-	var label = (row && row.getAttribute('data-domain')) || 'endpoint';
+	const row = link.closest('tr');
+	const label = (row && row.getAttribute('data-domain')) || 'endpoint';
 	if (!window.confirm('Delete this ' + label + '?')) {
 		return;
 	}
 
-	var url = new URL(link.href, window.location.href);
-	var index = link.getAttribute('data-index');
+	const url = new URL(link.href, window.location.href);
+	const index = link.getAttribute('data-index');
 
 	wpchPost('wpch_delete_endpoint', {
 		index: index,
@@ -233,7 +233,7 @@ document.addEventListener('click', function (e) {
 // DOMContentLoaded handler below so it can show a running "X of Y" count) —
 // swaps the returned row HTML in place and re-renders the health tabs.
 function wpchRefreshStatuses(index, indexes) {
-	var fields = {};
+	const fields = {};
 	if (index !== undefined && index !== null && index !== '') {
 		fields.index = index;
 	} else if (indexes !== undefined && indexes !== null) {
@@ -243,7 +243,7 @@ function wpchRefreshStatuses(index, indexes) {
 	return wpchPost('wpch_refresh_statuses', fields)
 		.then(function (data) {
 			Object.keys(data.rows).forEach(function (i) {
-				var row = document.getElementById('wpch-row-' + i);
+				const row = document.getElementById('wpch-row-' + i);
 				if (row) {
 					row.outerHTML = data.rows[i];
 				}
@@ -259,20 +259,20 @@ function wpchRefreshStatuses(index, indexes) {
 // Endpoints fired per wpch_refresh_statuses call from the global Refresh
 // button — matches WPCH_Status_Checker::BATCH_SIZE so one client batch is
 // exactly one curl_multi batch server-side, with no further internal split.
-var WPCH_REFRESH_BATCH_SIZE = 8;
+const WPCH_REFRESH_BATCH_SIZE = 8;
 
 document.addEventListener('DOMContentLoaded', function () {
-	var refreshBtn = document.getElementById('wpch-refresh-btn');
+	const refreshBtn = document.getElementById('wpch-refresh-btn');
 	if (!refreshBtn) {
 		return;
 	}
 
 	refreshBtn.addEventListener('click', function () {
-		var btn = this;
+		const btn = this;
 		// Read from the DOM rather than a stored count: it's already the
 		// source of truth for which rows exist, and matches server-side
 		// indexes 1:1 (see render_endpoint_row()).
-		var indexes = Array.prototype.map.call(document.querySelectorAll('.refresh-row'), function (el) {
+		const indexes = Array.prototype.map.call(document.querySelectorAll('.refresh-row'), function (el) {
 			return el.getAttribute('data-index');
 		});
 
@@ -280,16 +280,16 @@ document.addEventListener('DOMContentLoaded', function () {
 			return;
 		}
 
-		var batches = [];
-		for (var i = 0; i < indexes.length; i += WPCH_REFRESH_BATCH_SIZE) {
+		const batches = [];
+		for (let i = 0; i < indexes.length; i += WPCH_REFRESH_BATCH_SIZE) {
 			batches.push(indexes.slice(i, i + WPCH_REFRESH_BATCH_SIZE));
 		}
 
 		btn.disabled = true;
-		var done = 0;
+		let done = 0;
 		btn.textContent = 'Refreshing 0 of ' + indexes.length + '…';
 
-		var chain = Promise.resolve();
+		let chain = Promise.resolve();
 		batches.forEach(function (batch) {
 			chain = chain.then(function () {
 				return wpchRefreshStatuses(null, batch).then(function () {
@@ -309,7 +309,7 @@ document.addEventListener('DOMContentLoaded', function () {
 // Per-row refresh buttons. Delegated on document: a refresh replaces the
 // row's markup (button included), so a direct listener would be lost.
 document.addEventListener('click', function (e) {
-	var btn = e.target.closest('.refresh-row');
+	const btn = e.target.closest('.refresh-row');
 	if (!btn) {
 		return;
 	}
@@ -333,14 +333,14 @@ document.addEventListener('click', function (e) {
 // criteria to stay visible. Enter closes the palette and keeps the query;
 // Esc clears it (the selects are untouched either way).
 
-var wpchSearchQuery = '';
-var wpchFilters = { tag: '', wp: '', php: '' };
+let wpchSearchQuery = '';
+const wpchFilters = { tag: '', wp: '', php: '' };
 
 // Folders the filter forced open so their matching rows are visible, mapped
 // to the open state to restore once the filters clear (checkbox id => original
 // checked). The checkboxes are flipped programmatically, which fires no
 // change event — so folders.js never persists the temporary expansion.
-var wpchSearchOpenedFolders = {};
+let wpchSearchOpenedFolders = {};
 
 function wpchFilterActive() {
 	return '' !== wpchSearchQuery || '' !== wpchFilters.tag || '' !== wpchFilters.wp || '' !== wpchFilters.php;
@@ -351,7 +351,7 @@ function wpchRowMatchesFilters(row) {
 		return false;
 	}
 	if ('' !== wpchFilters.tag) {
-		var tag = row.getAttribute('data-tag') || '';
+		const tag = row.getAttribute('data-tag') || '';
 		if ('__none__' === wpchFilters.tag ? '' !== tag : tag !== wpchFilters.tag) {
 			return false;
 		}
@@ -367,17 +367,17 @@ function wpchRowMatchesFilters(row) {
 }
 
 function wpchApplyFilters() {
-	var table = document.getElementById('wpch-status-table');
+	const table = document.getElementById('wpch-status-table');
 	if (!table) {
 		return;
 	}
 
-	var active = wpchFilterActive();
-	var total = 0;
-	var shown = 0;
+	const active = wpchFilterActive();
+	let total = 0;
+	let shown = 0;
 	table.querySelectorAll(':scope > tbody > tr:not(.parent-row)').forEach(function (row) {
 		total++;
-		var match = !active || wpchRowMatchesFilters(row);
+		const match = !active || wpchRowMatchesFilters(row);
 		row.classList.toggle('wpch-search-miss', !match);
 		if (match) {
 			shown++;
@@ -388,10 +388,10 @@ function wpchApplyFilters() {
 	// and expand collapsed groups that do hold a match — otherwise the CSS
 	// that hides a closed folder's rows would keep the hit invisible.
 	table.querySelectorAll(':scope > tbody').forEach(function (tbody) {
-		var any = tbody.querySelector('tr:not(.parent-row):not(.wpch-search-miss)');
+		const any = tbody.querySelector('tr:not(.parent-row):not(.wpch-search-miss)');
 		tbody.classList.toggle('wpch-search-miss', active && !any);
 
-		var toggle = tbody.querySelector('.parent-row input[type="checkbox"]');
+		const toggle = tbody.querySelector('.parent-row input[type="checkbox"]');
 		if (active && any && toggle && !toggle.checked) {
 			if (!(toggle.id in wpchSearchOpenedFolders)) {
 				wpchSearchOpenedFolders[toggle.id] = false;
@@ -403,7 +403,7 @@ function wpchApplyFilters() {
 	// All filters cleared: fold the force-opened groups back to how the user had them.
 	if (!active) {
 		Object.keys(wpchSearchOpenedFolders).forEach(function (id) {
-			var toggle = document.getElementById(id);
+			const toggle = document.getElementById(id);
 			if (toggle) {
 				toggle.checked = wpchSearchOpenedFolders[id];
 			}
@@ -411,13 +411,13 @@ function wpchApplyFilters() {
 		wpchSearchOpenedFolders = {};
 	}
 
-	var count = document.getElementById('wpch-search-count');
+	const count = document.getElementById('wpch-search-count');
 	if (count) {
 		count.textContent = '' === wpchSearchQuery ? '' : shown + ' / ' + total;
 	}
-	var filterCount = document.getElementById('wpch-filter-count');
+	const filterCount = document.getElementById('wpch-filter-count');
 	if (filterCount) {
-		var selectsActive = '' !== wpchFilters.tag || '' !== wpchFilters.wp || '' !== wpchFilters.php;
+		const selectsActive = '' !== wpchFilters.tag || '' !== wpchFilters.wp || '' !== wpchFilters.php;
 		filterCount.textContent = selectsActive ? shown + ' / ' + total : '';
 	}
 }
@@ -429,12 +429,12 @@ function wpchApplyDomainFilter(query) {
 
 // Newest-first order for the WP/PHP version select options.
 function wpchVersionCompareDesc(a, b) {
-	var pa = a.split('.');
-	var pb = b.split('.');
-	var len = Math.max(pa.length, pb.length);
-	for (var i = 0; i < len; i++) {
-		var na = parseInt(pa[i], 10) || 0;
-		var nb = parseInt(pb[i], 10) || 0;
+	const pa = a.split('.');
+	const pb = b.split('.');
+	const len = Math.max(pa.length, pb.length);
+	for (let i = 0; i < len; i++) {
+		const na = parseInt(pa[i], 10) || 0;
+		const nb = parseInt(pb[i], 10) || 0;
 		if (na !== nb) {
 			return nb - na;
 		}
@@ -446,7 +446,7 @@ function wpchVersionCompareDesc(a, b) {
 // the table rows, keeping the current selection when it still exists. Called
 // on load and after every row swap (a refresh can change a site's versions).
 function wpchRebuildVersionFilterOptions() {
-	var table = document.getElementById('wpch-status-table');
+	const table = document.getElementById('wpch-status-table');
 	if (!table) {
 		return;
 	}
@@ -455,26 +455,26 @@ function wpchRebuildVersionFilterOptions() {
 		['wpch-filter-wp', 'data-wp', 'wp'],
 		['wpch-filter-php', 'data-php', 'php'],
 	].forEach(function (spec) {
-		var select = document.getElementById(spec[0]);
+		const select = document.getElementById(spec[0]);
 		if (!select) {
 			return;
 		}
 
-		var seen = {};
+		const seen = {};
 		table.querySelectorAll(':scope > tbody > tr:not(.parent-row)').forEach(function (row) {
-			var value = row.getAttribute(spec[1]) || '';
+			const value = row.getAttribute(spec[1]) || '';
 			if (value) {
 				seen[value] = true;
 			}
 		});
-		var versions = Object.keys(seen).sort(wpchVersionCompareDesc);
+		const versions = Object.keys(seen).sort(wpchVersionCompareDesc);
 
-		var current = select.value;
+		const current = select.value;
 		while (select.options.length > 1) {
 			select.remove(1);
 		}
 		versions.forEach(function (version) {
-			var option = document.createElement('option');
+			const option = document.createElement('option');
 			option.value = version;
 			option.textContent = version;
 			select.appendChild(option);
@@ -491,7 +491,7 @@ function wpchRebuildVersionFilterOptions() {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-	var selects = [
+	const selects = [
 		['wpch-filter-tag', 'tag'],
 		['wpch-filter-wp', 'wp'],
 		['wpch-filter-php', 'php'],
@@ -502,7 +502,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	wpchRebuildVersionFilterOptions();
 	selects.forEach(function (spec) {
-		var select = document.getElementById(spec[0]);
+		const select = document.getElementById(spec[0]);
 		if (select) {
 			select.addEventListener('change', function () {
 				wpchFilters[spec[1]] = this.value;
@@ -513,13 +513,13 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 function wpchOpenSearch() {
-	var dlg = document.getElementById('wpch-search');
+	const dlg = document.getElementById('wpch-search');
 	if (!dlg) {
 		return;
 	}
 
 	// The filter only acts on the main table — bring its tab to the front.
-	var allTab = document.querySelector('.wpch-health-tab[data-tab="all"]');
+	const allTab = document.querySelector('.wpch-health-tab[data-tab="all"]');
 	if (allTab) {
 		wpchActivateHealthTab(allTab);
 	}
@@ -527,13 +527,13 @@ function wpchOpenSearch() {
 	if (!dlg.open) {
 		dlg.show(); // non-modal: the table stays visible and interactive
 	}
-	var input = document.getElementById('wpch-search-input');
+	const input = document.getElementById('wpch-search-input');
 	input.focus();
 	input.select();
 }
 
 function wpchCloseSearch(clear) {
-	var dlg = document.getElementById('wpch-search');
+	const dlg = document.getElementById('wpch-search');
 	if (!dlg) {
 		return;
 	}
@@ -565,23 +565,33 @@ document.addEventListener('keydown', function (e) {
 });
 
 document.addEventListener('DOMContentLoaded', function () {
-	var input = document.getElementById('wpch-search-input');
+	const input = document.getElementById('wpch-search-input');
 	if (input) {
+		// Debounced so a filter pass (which walks every row) doesn't run on
+		// every single keystroke — only once typing pauses.
+		let debounceTimer = null;
 		input.addEventListener('input', function () {
-			wpchApplyDomainFilter(this.value);
+			const value = this.value;
+			clearTimeout(debounceTimer);
+			debounceTimer = setTimeout(function () {
+				wpchApplyDomainFilter(value);
+			}, 150);
 		});
 		input.addEventListener('keydown', function (e) {
 			if ('Escape' === e.key) {
 				e.preventDefault();
+				clearTimeout(debounceTimer);
 				wpchCloseSearch(true);
 			} else if ('Enter' === e.key) {
 				e.preventDefault();
+				clearTimeout(debounceTimer);
+				wpchApplyDomainFilter(this.value);
 				wpchCloseSearch(false);
 			}
 		});
 	}
 
-	var searchBtn = document.getElementById('wpch-search-btn');
+	const searchBtn = document.getElementById('wpch-search-btn');
 	if (searchBtn) {
 		searchBtn.addEventListener('click', wpchOpenSearch);
 	}
@@ -593,7 +603,7 @@ document.addEventListener('DOMContentLoaded', function () {
 // Delegated on document because a Refresh replaces the tab bar and tier
 // panels (#wpch-health-tabs-swap) with fresh server-rendered markup.
 function wpchActivateHealthTab(tab) {
-	var container = tab.closest('.wpch-health-tabs');
+	const container = tab.closest('.wpch-health-tabs');
 	container.querySelectorAll('.wpch-health-tab').forEach(function (t) {
 		t.classList.toggle('is-active', t === tab);
 	});
@@ -603,7 +613,7 @@ function wpchActivateHealthTab(tab) {
 }
 
 document.addEventListener('click', function (e) {
-	var tab = e.target.closest('.wpch-health-tab');
+	const tab = e.target.closest('.wpch-health-tab');
 	if (tab && !tab.disabled) {
 		wpchActivateHealthTab(tab);
 	}
@@ -615,15 +625,15 @@ document.addEventListener('click', function (e) {
 // the user was on selected; if that tier just emptied, falls back to the
 // always-present Sites Status tab (which the server marks active by default).
 function wpchReplaceHealthTabs(html) {
-	var swap = document.getElementById('wpch-health-tabs-swap');
+	const swap = document.getElementById('wpch-health-tabs-swap');
 	if (!swap || !html) {
 		return;
 	}
-	var container = document.getElementById('wpch-health-tabs');
-	var activeTab = container.querySelector('.wpch-health-tab.is-active');
-	var activeSlug = activeTab ? activeTab.dataset.tab : 'all';
+	const container = document.getElementById('wpch-health-tabs');
+	const activeTab = container.querySelector('.wpch-health-tab.is-active');
+	const activeSlug = activeTab ? activeTab.dataset.tab : 'all';
 	swap.outerHTML = html;
-	var fresh = container.querySelector('.wpch-health-tab[data-tab="' + activeSlug + '"]');
+	let fresh = container.querySelector('.wpch-health-tab[data-tab="' + activeSlug + '"]');
 	if (!fresh || fresh.disabled) {
 		fresh = container.querySelector('.wpch-health-tab[data-tab="all"]');
 	}
