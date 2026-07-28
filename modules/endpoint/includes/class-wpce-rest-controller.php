@@ -97,6 +97,12 @@ class WPCE_Rest_Controller
 			$update_plugins = get_site_transient('update_plugins');
 		}
 		$updates = ! empty($update_plugins->response) ? $update_plugins->response : [];
+		// Plugins WordPress checked against the wordpress.org API and found
+		// current — combined with $updates (checked and out of date), this is
+		// every plugin WordPress recognizes as wordpress.org-hosted, i.e. free.
+		// A plugin absent from both is very likely premium/custom, though it
+		// could also just be new enough to predate the first update check.
+		$no_update_plugins = ! empty($update_plugins->no_update) ? $update_plugins->no_update : [];
 
 		$update_core = get_site_transient('update_core');
 		if (false === $update_core) {
@@ -132,6 +138,7 @@ class WPCE_Rest_Controller
 				'update_available' => isset($updates[$file]),
 				'new_version'      => isset($updates[$file]->new_version) ? $updates[$file]->new_version : null,
 				'auto_update'      => $auto_update,
+				'on_wordpress_org' => isset($updates[$file]) || isset($no_update_plugins[$file]),
 			];
 		}
 

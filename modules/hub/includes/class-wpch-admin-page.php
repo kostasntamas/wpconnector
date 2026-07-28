@@ -508,6 +508,9 @@ class WPCH_Admin_Page
 											<span style="color:#c98a00;"> &rarr; update to v<?php echo esc_html($plugin['new_version']); ?> available</span>
 										<?php endif; ?>
 										<div class="updates-info">
+											<?php if (isset($plugin['on_wordpress_org'])) : ?>
+												<span style="color:<?php echo $plugin['on_wordpress_org'] ? '#1a7f37' : '#8250df'; ?>;" title="<?php echo $plugin['on_wordpress_org'] ? 'Found on WordPress.org — likely free' : 'Not found on WordPress.org — likely a premium or custom plugin'; ?>"><?php echo $plugin['on_wordpress_org'] ? ' Free' : ' Premium'; ?></span>
+											<?php endif; ?>
 											<?php if (! empty($plugin['auto_update'])) : ?>
 												<span style="color:#1a7f37;" title="Auto-updates enabled for this plugin"> &#8635; auto</span>
 											<?php endif; ?>
@@ -541,7 +544,13 @@ class WPCH_Admin_Page
 			foreach ($status['plugins'] as $plugin) {
 				$key = strtolower($plugin['name']);
 				if (! isset($plugins[$key])) {
-					$plugins[$key] = ['name' => $plugin['name'], 'sites' => []];
+					$plugins[$key] = [
+						'name'             => $plugin['name'],
+						'sites'            => [],
+						// Same plugin should report the same origin on every site;
+						// the first site to list it decides the card's badge.
+						'on_wordpress_org' => isset($plugin['on_wordpress_org']) ? $plugin['on_wordpress_org'] : null,
+					];
 				}
 				$plugins[$key]['sites'][$site] = [
 					'version' => $plugin['version'],
@@ -571,7 +580,12 @@ class WPCH_Admin_Page
 							}
 							?>
 							<div class="wpch-plugin-card" title="<?php echo esc_attr(implode("\n", $site_lines)); ?>">
-								<strong><?php echo esc_html($plugin['name']); ?></strong>
+								<strong>
+									<?php echo esc_html($plugin['name']); ?>
+									<?php if (null !== $plugin['on_wordpress_org']) : ?>
+										<span style="color:<?php echo $plugin['on_wordpress_org'] ? '#1a7f37' : '#8250df'; ?>;font-size:0.75rem;font-weight:400;" title="<?php echo $plugin['on_wordpress_org'] ? 'Found on WordPress.org — likely free' : 'Not found on WordPress.org — likely a premium or custom plugin'; ?>"><?php echo $plugin['on_wordpress_org'] ? ' Free' : ' Premium'; ?></span>
+									<?php endif; ?>
+								</strong>
 								<span class="wpch-plugin-count"><?php echo count($plugin['sites']); ?> <?php echo 1 === count($plugin['sites']) ? 'site' : 'sites'; ?></span>
 							</div>
 						<?php endforeach; ?>
