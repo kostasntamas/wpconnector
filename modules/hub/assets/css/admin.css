@@ -747,6 +747,26 @@ tr.child-row {
 tr.child-row:last-child {
 	border-bottom: 1px dashed var(--border);
 }
+
+/* Rows the page rendered from an empty cache: their status is being fetched in
+   the background right now (see the pending sweep in admin.js), and the row is
+   replaced wholesale the moment it lands. */
+tr.child-row.wpch-row-pending {
+	opacity: 0.7;
+	animation: wpch-pending-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes wpch-pending-pulse {
+	50% {
+		opacity: 0.45;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	tr.child-row.wpch-row-pending {
+		animation: none;
+	}
+}
 tr.child-row:last-child {
 	anchor-name: --last-folder-item;
 	anchor-scope: --last-folder-item;

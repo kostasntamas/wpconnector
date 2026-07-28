@@ -298,6 +298,14 @@ class WPCH_Endpoints
 		return self::strip_status_path($endpoint_url) . '/wp-admin/';
 	}
 
+	// The sibling /plugins route (endpoint module 2.3.7+), derived from the
+	// stored status URL. Only requested when a plugins dialog is opened — the
+	// per-plugin list is deliberately not part of the polled status payload.
+	public static function plugins_url(string $endpoint_url): string
+	{
+		return self::strip_status_path($endpoint_url) . '/wp-json/wpconnector/v1/plugins';
+	}
+
 	// The row's Login link: the endpoint's own 'login_url' when one is set,
 	// otherwise the shared default (/wp-admin/ on the site's base URL).
 	public static function login_url_for(array $endpoint): string

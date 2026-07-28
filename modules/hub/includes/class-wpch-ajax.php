@@ -40,6 +40,50 @@ class WPCH_Ajax
 		add_action('wp_ajax_wpch_comment_fetch', [$this, 'comment_fetch']);
 		add_action('wp_ajax_wpch_reorder', [$this, 'reorder']);
 		add_action('wp_ajax_wpch_folder_state', [$this, 'folder_state']);
+		add_action('wp_ajax_wpch_fetch_plugins', [$this, 'fetch_plugins']);
+		add_action('wp_ajax_wpch_fetch_all_plugins', [$this, 'fetch_all_plugins']);
+	}
+
+	// One site's plugin list, rendered for the dialog wpchOpenPlugins() opens.
+	// Served from the plugins cache when it's warm, otherwise fetched from that
+	// endpoint's /plugins route — one request, only because someone asked.
+	public function fetch_plugins()
+	{
+		$this->require_manager();
+
+		$endpoints = $this->endpoints->get_all();
+		$index     = isset($_POST['index']) ? (int) $_POST['index'] : -1;
+		if (! isset($endpoints[$index])) {
+			wp_send_json_error(['message' => 'Site not found.']);
+		}
+
+		$lists = $this->status_checker->fetch_plugins([$index => $endpoints[$index]]);
+		$list  = $lists[$index];
+		if (is_wp_error($list)) {
+			wp_send_json_error(['message' => 'Could not read this site\'s plugins: ' . $list->get_error_message()]);
+		}
+
+		ob_start();
+		$this->admin_page->render_plugins_list($list);
+
+		wp_send_json_success(['html' => ob_get_clean()]);
+	}
+
+	// The sidebar's All Plugins grid, aggregated across every site. Reads the
+	// plugins cache, which the prewarm cron keeps warm, so this is normally a
+	// pure render with no requests at all; anything stale is fetched in the
+	// usual batches.
+	public function fetch_all_plugins()
+	{
+		$this->require_manager();
+
+		$endpoints = $this->endpoints->get_all();
+		$lists     = $this->status_checker->fetch_plugins($endpoints);
+
+		ob_start();
+		$this->admin_page->render_all_plugins_grid($endpoints, $lists);
+
+		wp_send_json_success(['html' => ob_get_clean()]);
 	}
 
 	// Shared guard of the AJAX handlers: manage_options plus the wpch_manage
@@ -398,7 +442,10 @@ class WPCH_Ajax
 				$target[$i] = $endpoints[$i];
 				unset($others[$i]);
 			}
-			$statuses = $this->status_checker->fetch_statuses($others);
+			// The untargeted sites are only here so the health tabs can regroup
+			// with the full picture — read them straight from the cache so a
+			// batch of 8 never drags the other ninety-odd sites onto the wire.
+			$statuses = $this->status_checker->cached_statuses($others);
 			$forced   = $this->status_checker->fetch_statuses($target, true);
 			foreach ($indexes as $i) {
 				$statuses[$i] = $forced[$i];

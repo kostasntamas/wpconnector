@@ -56,6 +56,24 @@ function wpc_activate()
 	}
 }
 
+register_deactivation_hook(WPC_PLUGIN_FILE, 'wpc_deactivate');
+function wpc_deactivate()
+{
+	wpc_clear_hub_cron();
+}
+
+/**
+ * Drops the hub's status prewarm cron event (WPCH_Prewarm::HOOK). Cleared by
+ * hook name rather than through the class so this still works when the hub
+ * module isn't loaded in the current mode.
+ */
+function wpc_clear_hub_cron()
+{
+	if (wp_next_scheduled('wpch_prewarm_statuses')) {
+		wp_clear_scheduled_hook('wpch_prewarm_statuses');
+	}
+}
+
 function wpc_ensure_endpoint_key()
 {
 	if (! get_option('wpce_secret_key')) {
@@ -91,6 +109,10 @@ add_action('admin_init', function () {
 	update_option('wpc_mode', $mode);
 	if ('endpoint' === $mode || 'both' === $mode) {
 		wpc_ensure_endpoint_key();
+	}
+	if ('hub' !== $mode && 'both' !== $mode) {
+		// The hub module won't load to unschedule its own cron event.
+		wpc_clear_hub_cron();
 	}
 
 	wp_safe_redirect(add_query_arg(

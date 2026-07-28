@@ -5,11 +5,27 @@ if (! defined('ABSPATH')) {
 }
 
 /**
- * Fetches and evaluates remote endpoint status.
+ * Fetches and evaluates remote endpoint data: the frequently-polled status
+ * payload, and — separately, on demand and on its own much longer TTL — each
+ * site's per-plugin list.
  */
 class WPCH_Status_Checker
 {
-	const CACHE_KEY = 'wpch_status_cache';
+	// The status cache is a plain, non-autoloaded option rather than a
+	// transient. A transient has one expiry for the whole map, so a single
+	// quiet window wiped every site's entry at once and the next visitor paid
+	// for a completely cold fetch — the exact reason the hub page used to take
+	// a minute to open. Freshness is now decided per entry from its own
+	// 'fetched_at', and nothing ever expires the map as a whole.
+	const CACHE_OPTION = 'wpch_status_cache';
+
+	// Where the cache lived before 2.3.6; deleted by prune_cache().
+	const LEGACY_CACHE_KEY = 'wpch_status_cache';
+
+	// Per-plugin lists, cached separately from statuses and on a much longer
+	// TTL. Keeping them out of the status payload is what stops every hub page
+	// load from serializing (and re-rendering) every site's full plugin list.
+	const PLUGINS_CACHE_OPTION = 'wpch_plugins_cache';
 
 	// How many WordPress feature releases behind the latest a site may be and
 	// still count as healthy. More than this many releases behind grades the
@@ -23,9 +39,10 @@ class WPCH_Status_Checker
 	// abort them — see request_in_batches().
 	const BATCH_SIZE = 8;
 
-	// Per-endpoint fetch metadata for the most recent fetch_statuses() call,
-	// keyed like its input array: ['duration' => float|null seconds,
-	// 'cached' => bool, 'fetched_at' => unix time].
+	// Per-endpoint fetch metadata for the most recent fetch_statuses() or
+	// cached_statuses() call, keyed like its input array: ['duration' =>
+	// float|null seconds, 'cached' => bool, 'fetched_at' => unix time]. Sites
+	// that came back pending have no entry.
 	/** @var array */
 	private $last_meta = [];
 
@@ -35,27 +52,177 @@ class WPCH_Status_Checker
 	}
 
 	// Seconds a fetched status stays valid; page loads inside this window
-	// render from the cache with zero network calls. Override with
-	// WPCH_STATUS_CACHE_TTL in wp-config.php (0 disables caching); the
-	// Refresh button always bypasses it via $force.
+	// render from the cache with zero network calls. Comfortably longer than
+	// the prewarm cron's interval (WPCH_Prewarm refreshes every 10 minutes by
+	// default), so a visitor normally finds every entry fresh. Override with
+	// WPCH_STATUS_CACHE_TTL in wp-config.php (0 disables caching); the Refresh
+	// button always bypasses it via $force.
 	private function cache_ttl(): int
 	{
-		return defined('WPCH_STATUS_CACHE_TTL') ? (int) WPCH_STATUS_CACHE_TTL : 120;
+		return defined('WPCH_STATUS_CACHE_TTL') ? (int) WPCH_STATUS_CACHE_TTL : 900;
 	}
 
-	public function fetch_statuses(array $endpoints, bool $force = false): array
+	// Seconds a fetched plugin list stays valid. Much longer than the status
+	// TTL: what a site has installed changes far less often than whether it is
+	// up, and the list is only fetched when a dialog is actually opened.
+	// Override with WPCH_PLUGINS_CACHE_TTL in wp-config.php.
+	private function plugins_cache_ttl(): int
+	{
+		return defined('WPCH_PLUGINS_CACHE_TTL') ? (int) WPCH_PLUGINS_CACHE_TTL : HOUR_IN_SECONDS;
+	}
+
+	private function read_cache(string $option): array
+	{
+		$cache = get_option($option, []);
+		return is_array($cache) ? $cache : [];
+	}
+
+	private function write_cache(string $option, array $cache)
+	{
+		// Explicitly not autoloaded: these maps are big and have no business
+		// being unserialized on every front-end hit.
+		update_option($option, $cache, false);
+	}
+
+	// The usable cache entry for $endpoint, as ['payload' => array or WP_Error,
+	// 'meta' => ...], or null when there is none (no id, edited url/key,
+	// expired, or caching switched off).
+	private function cached_entry(array $cache, array $endpoint, int $now, int $ttl)
+	{
+		$id = isset($endpoint['id']) ? $endpoint['id'] : '';
+		if ($ttl <= 0 || '' === $id || ! isset($cache[$id])) {
+			return null;
+		}
+
+		// Entries are stamped with a hash of url|key, so editing either forces
+		// a live fetch instead of serving the previous site's answer.
+		$entry = $cache[$id];
+		if ($entry['hash'] !== md5($endpoint['url'] . '|' . $endpoint['key'])) {
+			return null;
+		}
+		if (($now - $entry['fetched_at']) >= $ttl) {
+			return null;
+		}
+
+		if (isset($entry['error'])) {
+			$payload = new WP_Error('http_request_failed', $entry['error']);
+		} else {
+			// 'data' is the cached payload; 'status' is the same thing under
+			// its pre-2.3.7 name, still read so upgrading doesn't throw away a
+			// warm cache.
+			$payload = isset($entry['data']) ? $entry['data'] : (isset($entry['status']) ? $entry['status'] : null);
+			if (null === $payload) {
+				return null;
+			}
+		}
+
+		return [
+			'payload' => $payload,
+			'meta'    => [
+				'duration'   => isset($entry['duration']) ? $entry['duration'] : null,
+				'cached'     => true,
+				'fetched_at' => $entry['fetched_at'],
+			],
+		];
+	}
+
+	// Statuses that are already cached and still fresh, keyed like $endpoints;
+	// a site with no usable entry comes back as null, meaning "not checked
+	// yet". Never touches the network. This is what the hub page renders on
+	// load — the null rows are filled in right afterwards by the client's
+	// batched wpch_refresh_statuses calls (see admin.js), so opening the page
+	// no longer blocks on every site answering.
+	public function cached_statuses(array $endpoints): array
 	{
 		$this->last_meta = [];
 
 		$statuses = [];
+		$cache    = $this->read_cache(self::CACHE_OPTION);
+		$ttl      = $this->cache_ttl();
+		$now      = time();
+
+		foreach ($endpoints as $i => $endpoint) {
+			if ('' === trim($endpoint['key'])) {
+				$statuses[$i] = new WP_Error('missing_key', 'No secret key configured');
+				continue;
+			}
+
+			$entry = $this->cached_entry($cache, $endpoint, $now, $ttl);
+			if (null === $entry) {
+				$statuses[$i] = null;
+				continue;
+			}
+
+			$statuses[$i]        = $entry['payload'];
+			$this->last_meta[$i] = $entry['meta'];
+		}
+
+		return $statuses;
+	}
+
+	// Drops entries for endpoints that no longer exist from both caches, and
+	// clears the pre-2.3.6 transient the status cache used to live in. Called
+	// from the prewarm cron, the only caller that always sees the complete
+	// endpoint list.
+	public function prune_cache(array $endpoints)
+	{
+		delete_transient(self::LEGACY_CACHE_KEY);
+
+		$keep = [];
+		foreach ($endpoints as $endpoint) {
+			if (! empty($endpoint['id'])) {
+				$keep[$endpoint['id']] = true;
+			}
+		}
+
+		foreach ([self::CACHE_OPTION, self::PLUGINS_CACHE_OPTION] as $option) {
+			$cache = $this->read_cache($option);
+			if (! $cache) {
+				continue;
+			}
+			$pruned = array_intersect_key($cache, $keep);
+			if (count($pruned) !== count($cache)) {
+				$this->write_cache($option, $pruned);
+			}
+		}
+	}
+
+	public function fetch_statuses(array $endpoints, bool $force = false): array
+	{
+		return $this->fetch($endpoints, 'status', $force);
+	}
+
+	// The per-plugin list for each endpoint, keyed like $endpoints: an array of
+	// plugin rows, or a WP_Error. Requested from the endpoint's /plugins route
+	// (endpoint module 2.3.7+) and cached on its own long TTL, so this only
+	// ever runs when a plugins dialog is opened or the prewarm cron refreshes a
+	// list that has gone stale.
+	public function fetch_plugins(array $endpoints, bool $force = false): array
+	{
+		return $this->fetch($endpoints, 'plugins', $force);
+	}
+
+	// Shared request pipeline for both routes. $kind is 'status' or 'plugins'
+	// and decides the URL, which cache is used, and how the decoded body is
+	// unwrapped — everything else (batching, the SSL hooks, the retry pass, the
+	// timing metadata) is identical.
+	private function fetch(array $endpoints, string $kind, bool $force): array
+	{
+		$this->last_meta = [];
+
+		$is_plugins   = 'plugins' === $kind;
+		$cache_option = $is_plugins ? self::PLUGINS_CACHE_OPTION : self::CACHE_OPTION;
+		$ttl          = $is_plugins ? $this->plugins_cache_ttl() : $this->cache_ttl();
+
+		$statuses = [];
 		$requests = [];
 
-		$ttl   = $this->cache_ttl();
 		$now   = time();
-		$cache = get_transient(self::CACHE_KEY);
-		if (! is_array($cache)) {
-			$cache = [];
-		}
+		$cache = $this->read_cache($cache_option);
+
+		// Plugin lists that arrived inside a status payload (see below), to be
+		// merged into the plugins cache once this run is done.
+		$stashed_plugins = [];
 
 		// Opt-in escape hatch for local/dev stacks whose HTTPS setup is broken
 		// beyond the CA bundle below (self-signed endpoint certs and the like).
@@ -88,27 +255,15 @@ class WPCH_Status_Checker
 				continue;
 			}
 
-			// Cache entries are keyed by the endpoint's stable id and stamped
-			// with a hash of url|key, so editing either forces a live fetch.
-			$id   = isset($endpoint['id']) ? $endpoint['id'] : '';
-			$hash = md5($endpoint['url'] . '|' . $endpoint['key']);
-
-			if (
-				! $force && $ttl > 0 && $id && isset($cache[$id])
-				&& $cache[$id]['hash'] === $hash
-				&& ($now - $cache[$id]['fetched_at']) < $ttl
-			) {
-				$entry        = $cache[$id];
-				$statuses[$i] = isset($entry['error'])
-					? new WP_Error('http_request_failed', $entry['error'])
-					: $entry['status'];
-
-				$this->last_meta[$i] = [
-					'duration'   => isset($entry['duration']) ? $entry['duration'] : null,
-					'cached'     => true,
-					'fetched_at' => $entry['fetched_at'],
-				];
-				continue;
+			// Cache entries are keyed by the endpoint's stable id (see
+			// cached_entry() for what makes one usable).
+			if (! $force) {
+				$entry = $this->cached_entry($cache, $endpoint, $now, $ttl);
+				if (null !== $entry) {
+					$statuses[$i]        = $entry['payload'];
+					$this->last_meta[$i] = $entry['meta'];
+					continue;
+				}
 			}
 
 			// Each request needs its own Hooks instance: request_multiple()
@@ -121,7 +276,9 @@ class WPCH_Status_Checker
 			// The key travels as a header rather than ?key= so it never lands
 			// in the remote server's access logs; the endpoint's permission
 			// check accepts both.
-			$base_url     = strtok(rtrim($endpoint['url'], '/'), '?');
+			$base_url     = $is_plugins
+				? WPCH_Endpoints::plugins_url($endpoint['url'])
+				: strtok(rtrim($endpoint['url'], '/'), '?');
 			$requests[$i] = [
 				'url'     => $base_url,
 				'headers' => ['x-wpconnector-key' => $endpoint['key']],
@@ -176,7 +333,35 @@ class WPCH_Status_Checker
 
 		$fetched_at = time();
 		foreach ($responses as $i => $response) {
-			$statuses[$i] = $this->parse_response($response);
+			$payload = $this->parse_response($response);
+			$id      = isset($endpoints[$i]['id']) ? $endpoints[$i]['id'] : '';
+			$hash    = md5($endpoints[$i]['url'] . '|' . $endpoints[$i]['key']);
+
+			if (! is_wp_error($payload)) {
+				if ($is_plugins) {
+					// The /plugins route answers {"plugins": [...]}.
+					$payload = isset($payload['plugins']) && is_array($payload['plugins'])
+						? $payload['plugins']
+						: new WP_Error('bad_response', 'Invalid plugin list');
+				} elseif (isset($payload['plugins'])) {
+					// Endpoints before 2.3.7 ship the whole plugin list inside
+					// the status payload. Keep it — it saves a /plugins request
+					// later, and those endpoints have no such route anyway —
+					// but move it into the plugins cache so it stays out of the
+					// status cache that every page load reads.
+					if ('' !== $id) {
+						$stashed_plugins[$id] = [
+							'hash'       => $hash,
+							'fetched_at' => $fetched_at,
+							'duration'   => null,
+							'data'       => $payload['plugins'],
+						];
+					}
+					unset($payload['plugins']);
+				}
+			}
+
+			$statuses[$i] = $payload;
 
 			$duration            = isset($durations[$i]) ? $durations[$i] : null;
 			$this->last_meta[$i] = [
@@ -185,28 +370,43 @@ class WPCH_Status_Checker
 				'fetched_at' => $fetched_at,
 			];
 
-			$id = isset($endpoints[$i]['id']) ? $endpoints[$i]['id'] : '';
 			if ('' === $id) {
 				continue;
 			}
+
+			// A failed plugins fetch is no reason to throw away a list we
+			// already have: endpoints before 2.3.7 have no /plugins route at
+			// all (their list arrives with the status payload and is stashed
+			// above), and a list that is merely old still beats an error. The
+			// stale entry is left in place so the next attempt still retries.
+			if ($is_plugins && is_wp_error($payload) && isset($cache[$id]['data']) && $cache[$id]['hash'] === $hash) {
+				$statuses[$i] = $cache[$id]['data'];
+				continue;
+			}
+
 			$entry = [
-				'hash'       => md5($endpoints[$i]['url'] . '|' . $endpoints[$i]['key']),
+				'hash'       => $hash,
 				'fetched_at' => $fetched_at,
 				'duration'   => $duration,
 			];
 			// Errors are cached too (as plain strings, not WP_Error objects) —
 			// otherwise every page load re-waits the full timeout for each
 			// offline site, which defeats the point of the cache.
-			if (is_wp_error($statuses[$i])) {
-				$entry['error'] = $statuses[$i]->get_error_message();
+			if (is_wp_error($payload)) {
+				$entry['error'] = $payload->get_error_message();
 			} else {
-				$entry['status'] = $statuses[$i];
+				$entry['data'] = $payload;
 			}
 			$cache[$id] = $entry;
 		}
 
 		if ($ttl > 0) {
-			set_transient(self::CACHE_KEY, $cache, $ttl);
+			$this->write_cache($cache_option, $cache);
+		}
+
+		if ($stashed_plugins && $this->plugins_cache_ttl() > 0) {
+			$plugins_cache = $this->read_cache(self::PLUGINS_CACHE_OPTION);
+			$this->write_cache(self::PLUGINS_CACHE_OPTION, $stashed_plugins + $plugins_cache);
 		}
 
 		return $statuses;
@@ -293,6 +493,14 @@ class WPCH_Status_Checker
 	// behind is 'deprecated' and lands in the Needs Attention tab.
 	public function wp_status(array $status): array
 	{
+		// null, as opposed to false, means the endpoint has no core update data
+		// cached yet and has queued a refresh (endpoint module 2.3.7+, see
+		// WPCE_Rest_Controller::update_data()). Saying "Up to date" there would
+		// be a guess — the next poll has the real answer. The tier stays 'good'
+		// so an unknown doesn't drag the site into Needs Attention.
+		if (array_key_exists('wp_update_available', $status) && null === $status['wp_update_available']) {
+			return ['label' => 'Not checked yet', 'tier' => 'good', 'color' => '#50575e'];
+		}
 		if (empty($status['wp_update_available'])) {
 			return ['label' => 'Up to date', 'tier' => 'good', 'color' => '#1a7f37'];
 		}

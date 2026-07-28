@@ -229,10 +229,10 @@ document.addEventListener('click', function (e) {
 
 // Posts wpch_refresh_statuses — every row if called with no arguments, just
 // one when index is given (per-row refresh buttons), or a specific set when
-// indexes is given (the global Refresh button, driven in batches by the
-// DOMContentLoaded handler below so it can show a running "X of Y" count) —
-// swaps the returned row HTML in place and re-renders the health tabs.
-function wpchRefreshStatuses(index, indexes) {
+// indexes is given (one batch from wpchRunBatchedRefresh()) — swaps the
+// returned row HTML in place and re-renders the health tabs. silent turns a
+// failure into a console warning instead of an alert.
+function wpchRefreshStatuses(index, indexes, silent) {
 	const fields = {};
 	if (index !== undefined && index !== null && index !== '') {
 		fields.index = index;
@@ -252,6 +252,13 @@ function wpchRefreshStatuses(index, indexes) {
 			wpchReplaceHealthTabs(data.health_tabs);
 		})
 		.catch(function (err) {
+			// The background sweep of pending rows runs unattended and one bad
+			// batch shouldn't throw a modal in the user's face — those rows just
+			// stay "Checking…" until Refresh is pressed.
+			if (silent) {
+				console.warn('WP Connector Hub: ' + (err.message || 'status refresh failed'));
+				return;
+			}
 			alert(err.message || 'Could not refresh sites. Please try again.');
 		});
 }
@@ -261,50 +268,168 @@ function wpchRefreshStatuses(index, indexes) {
 // exactly one curl_multi batch server-side, with no further internal split.
 const WPCH_REFRESH_BATCH_SIZE = 8;
 
+// Row indexes currently in the table, in DOM order. Read from the DOM rather
+// than a stored count: it's already the source of truth for which rows exist,
+// and matches server-side indexes 1:1 (see render_endpoint_row()).
+function wpchRowIndexes(selector) {
+	return Array.prototype.map.call(document.querySelectorAll(selector), function (el) {
+		return el.getAttribute('data-index');
+	});
+}
+
+// Force-fetches $indexes a batch at a time, sequentially, swapping rows in as
+// each batch lands. $verb labels the progress shown on the Refresh button (the
+// page's only status indicator for this), which stays disabled until the last
+// batch settles. Returns a promise that resolves when everything is done.
+function wpchRunBatchedRefresh(indexes, verb, silent) {
+	const btn = document.getElementById('wpch-refresh-btn');
+	const label = verb || 'Refreshing';
+
+	if (!indexes.length) {
+		return Promise.resolve();
+	}
+
+	const batches = [];
+	for (let i = 0; i < indexes.length; i += WPCH_REFRESH_BATCH_SIZE) {
+		batches.push(indexes.slice(i, i + WPCH_REFRESH_BATCH_SIZE));
+	}
+
+	let done = 0;
+	if (btn) {
+		btn.disabled = true;
+		btn.textContent = label + ' 0 of ' + indexes.length + '…';
+	}
+
+	let chain = Promise.resolve();
+	batches.forEach(function (batch) {
+		chain = chain.then(function () {
+			return wpchRefreshStatuses(null, batch, silent).then(function () {
+				done += batch.length;
+				if (btn) {
+					btn.textContent = label + ' ' + done + ' of ' + indexes.length + '…';
+				}
+			});
+		});
+	});
+
+	return chain.finally(function () {
+		if (btn) {
+			btn.disabled = false;
+			btn.textContent = 'Refresh';
+		}
+	});
+}
+
 document.addEventListener('DOMContentLoaded', function () {
 	const refreshBtn = document.getElementById('wpch-refresh-btn');
-	if (!refreshBtn) {
+	if (refreshBtn) {
+		refreshBtn.addEventListener('click', function () {
+			wpchRunBatchedRefresh(wpchRowIndexes('.refresh-row'), 'Refreshing');
+		});
+	}
+
+	// The page renders from the status cache alone and marks anything without a
+	// fresh entry as pending, so opening the hub never waits on the network.
+	// Those sites are fetched here instead, in the background and in batches,
+	// with the rows filling in as the answers arrive. Normally the prewarm cron
+	// has already warmed the cache and there is nothing pending at all.
+	const pending = wpchRowIndexes('tr[data-pending="1"] .refresh-row');
+	if (pending.length) {
+		wpchRunBatchedRefresh(pending, 'Checking', true);
+	}
+});
+
+// ---- Plugin dialogs ----
+// Plugin lists are not part of the page: the status payload carries only the
+// total/active/inactive counts, and the list itself is fetched from the site's
+// /plugins route the first time someone opens a dialog. That keeps every site's
+// full plugin list out of the page HTML (where it used to be rendered twice per
+// site, once for the main row and once for the health-tab row) and out of the
+// status cache the hub reads on every load.
+
+// Rows can be swapped in by AJAX, so the dialogs are created here rather than
+// rendered server-side — one per endpoint index, reused by the main table row
+// and that endpoint's health-tab row, and kept after loading so reopening is
+// instant.
+function wpchPluginsDialog(index, label) {
+	const id = 'wpch-plugins-' + index;
+	const existing = document.getElementById(id);
+	if (existing) {
+		return existing;
+	}
+
+	const dialog = document.createElement('dialog');
+	dialog.id = id;
+	dialog.style.minWidth = '550px';
+	dialog.style.maxWidth = '90vw';
+
+	const close = document.createElement('button');
+	close.type = 'button';
+	close.className = 'button close';
+	close.textContent = '×';
+	close.addEventListener('click', function () {
+		dialog.close();
+	});
+
+	const title = document.createElement('strong');
+	title.textContent = label + ' — Plugins';
+
+	const header = document.createElement('div');
+	header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;';
+	header.appendChild(title);
+	header.appendChild(close);
+
+	const body = document.createElement('div');
+	body.className = 'wpch-plugins-body';
+	body.innerHTML = '<p style="color:#666;">Loading…</p>';
+
+	const wrap = document.createElement('div');
+	wrap.style.padding = '16px';
+	wrap.appendChild(header);
+	wrap.appendChild(body);
+	dialog.appendChild(wrap);
+
+	(document.getElementById('wpch-dialogs') || document.body).appendChild(dialog);
+	return dialog;
+}
+
+function wpchOpenPlugins(index, label) {
+	const dialog = wpchPluginsDialog(index, label);
+	dialog.showModal();
+
+	if (dialog.dataset.loaded) {
 		return;
 	}
 
-	refreshBtn.addEventListener('click', function () {
-		const btn = this;
-		// Read from the DOM rather than a stored count: it's already the
-		// source of truth for which rows exist, and matches server-side
-		// indexes 1:1 (see render_endpoint_row()).
-		const indexes = Array.prototype.map.call(document.querySelectorAll('.refresh-row'), function (el) {
-			return el.getAttribute('data-index');
+	const body = dialog.querySelector('.wpch-plugins-body');
+	wpchPost('wpch_fetch_plugins', { index: index })
+		.then(function (data) {
+			body.innerHTML = data.html;
+			dialog.dataset.loaded = '1';
+		})
+		.catch(function (err) {
+			// Left unmarked so closing and reopening retries.
+			body.textContent = err.message || 'Could not load this site’s plugins.';
 		});
+}
 
-		if (!indexes.length) {
-			return;
-		}
+// The sidebar's All Plugins grid, aggregated server-side across every site.
+// Reloaded on each open so it reflects the latest refresh.
+function wpchLoadAllPlugins() {
+	const body = document.getElementById('wpch-all-plugins-body');
+	if (!body) {
+		return;
+	}
 
-		const batches = [];
-		for (let i = 0; i < indexes.length; i += WPCH_REFRESH_BATCH_SIZE) {
-			batches.push(indexes.slice(i, i + WPCH_REFRESH_BATCH_SIZE));
-		}
-
-		btn.disabled = true;
-		let done = 0;
-		btn.textContent = 'Refreshing 0 of ' + indexes.length + '…';
-
-		let chain = Promise.resolve();
-		batches.forEach(function (batch) {
-			chain = chain.then(function () {
-				return wpchRefreshStatuses(null, batch).then(function () {
-					done += batch.length;
-					btn.textContent = 'Refreshing ' + done + ' of ' + indexes.length + '…';
-				});
-			});
+	body.innerHTML = '<p style="color:#666;">Loading…</p>';
+	wpchPost('wpch_fetch_all_plugins', {})
+		.then(function (data) {
+			body.innerHTML = data.html;
+		})
+		.catch(function (err) {
+			body.textContent = err.message || 'Could not load the plugin list.';
 		});
-
-		chain.finally(function () {
-			btn.disabled = false;
-			btn.textContent = 'Refresh';
-		});
-	});
-});
+}
 
 // Per-row refresh buttons. Delegated on document: a refresh replaces the
 // row's markup (button included), so a direct listener would be lost.

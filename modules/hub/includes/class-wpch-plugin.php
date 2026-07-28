@@ -27,6 +27,9 @@ class WPCH_Plugin
 	/** @var WPCH_Comment_Sync */
 	private $comment_sync;
 
+	/** @var WPCH_Prewarm */
+	private $prewarm;
+
 	public function __construct()
 	{
 		$this->endpoints      = new WPCH_Endpoints();
@@ -35,6 +38,7 @@ class WPCH_Plugin
 		$this->admin_page     = new WPCH_Admin_Page($this->endpoints, $this->folders, $this->status_checker);
 		$this->comment_sync   = new WPCH_Comment_Sync($this->endpoints, $this->admin_page);
 		$this->ajax           = new WPCH_Ajax($this->endpoints, $this->folders, $this->status_checker, $this->admin_page);
+		$this->prewarm        = new WPCH_Prewarm($this->endpoints, $this->status_checker);
 	}
 
 	public function init()
@@ -48,5 +52,8 @@ class WPCH_Plugin
 
 		$this->ajax->register();
 		$this->comment_sync->register();
+		// Registered outside is_admin() on purpose — WP-Cron runs the event on
+		// front-end requests too.
+		$this->prewarm->register();
 	}
 }

@@ -443,15 +443,19 @@ class WPCH_Admin_Page
 		);
 	}
 
-	// The Plugins <td>: total/active/inactive counts plus the "View Plugins"
-	// button and its <dialog>. Shared by the main table rows and the health-tab
-	// tier rows — $dialog_id must be unique per rendered cell since the dialog
-	// markup lives inline next to the button.
-	public function render_plugins_cell(string $dialog_id, string $row_label, array $status)
+	// The Plugins <td>: total/active/inactive counts (which come from the small
+	// status payload) plus a "View Plugins" button. The list itself is not here
+	// — the button asks wpchOpenPlugins() for it, which fetches and renders it
+	// on first open (see wpch_fetch_plugins / render_plugins_list). Both the
+	// main table row and this endpoint's health-tab row pass the same $index,
+	// so they share one lazily-built dialog instead of each carrying a full
+	// copy of the list in the page's HTML.
+	public function render_plugins_cell(int $index, string $row_label, array $status)
 	{
+		$total = isset($status['plugins_total']) ? (int) $status['plugins_total'] : 0;
 	?>
 		<td>
-			<?php if (! empty($status['plugins'])) : ?>
+			<?php if ($total) : ?>
 				<div style="display: flex;flex-direction: column;align-items: center;justify-content: center;">
 				<?php endif; ?>
 				<?php
@@ -469,79 +473,104 @@ class WPCH_Admin_Page
 				echo ' </span>';
 				echo ' </div>';
 				?>
-				<?php if (! empty($status['plugins'])) : ?>
-					<button type="button" command="show-modal" commandfor="<?php echo esc_attr($dialog_id); ?>" style="margin-left: 1ch;" class="row-button button">View Plugins</button>
+				<?php if ($total) : ?>
+					<button type="button" onclick="wpchOpenPlugins(<?php echo (int) $index; ?>, '<?php echo esc_js($row_label); ?>')" style="margin-left: 1ch;" class="row-button button">View Plugins</button>
 				</div>
-				<dialog id="<?php echo esc_attr($dialog_id); ?>" style="min-width: 550px;max-width:90vw;">
-					<div style="padding:16px;">
-						<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-							<strong><?php echo esc_html($row_label); ?> &mdash; Plugins</strong>
-							<button type="button" commandfor="<?php echo esc_attr($dialog_id); ?>" command="close" class="button close"><?php echo WPCH_Icons::get('close', 18); ?></button>
-						</div>
-						<?php
-						$plugins_active_no_update = [];
-						$plugins_with_update      = [];
-						$plugins_inactive         = [];
-						foreach ($status['plugins'] as $plugin) {
-							if (! $plugin['active']) {
-								$plugins_inactive[] = $plugin;
-							} elseif (! empty($plugin['update_available'])) {
-								$plugins_with_update[] = $plugin;
-							} else {
-								$plugins_active_no_update[] = $plugin;
-							}
-						}
-						$plugin_groups = array_filter([$plugins_active_no_update, $plugins_with_update, $plugins_inactive]);
-						?>
-						<div style="display:grid;gap:.8em;max-height:60vh;max-height:60dvb;overflow:auto;padding: 1em;">
-							<?php $is_first_group = true; ?>
-							<?php foreach ($plugin_groups as $plugin_group) : ?>
-								<?php if (! $is_first_group) : ?>
-									<hr style="margin:4px 0;">
-								<?php endif; ?>
-								<?php $is_first_group = false; ?>
-								<?php foreach ($plugin_group as $plugin) : ?>
-									<div class="grid-info<?php echo (! empty($plugin['update_available'])) ? ' updates' : ''; ?>">
-										<?php echo esc_html($plugin['name']); ?>
-										<b><?php echo ' v' . esc_html($plugin['version']); ?></b>
-										<?php if (! empty($plugin['update_available'])) : ?>
-											<span style="color:#c98a00;"> &rarr; update to v<?php echo esc_html($plugin['new_version']); ?> available</span>
-										<?php endif; ?>
-										<div class="updates-info">
-											<?php if (isset($plugin['on_wordpress_org'])) : ?>
-												<span style="color:<?php echo $plugin['on_wordpress_org'] ? '#1a7f37' : '#8250df'; ?>;" title="<?php echo $plugin['on_wordpress_org'] ? 'Found on WordPress.org — likely free' : 'Not found on WordPress.org — likely a premium or custom plugin'; ?>"><?php echo $plugin['on_wordpress_org'] ? ' Free' : ' Premium'; ?></span>
-											<?php endif; ?>
-											<?php if (! empty($plugin['auto_update'])) : ?>
-												<span style="color:#1a7f37;" title="Auto-updates enabled for this plugin"> &#8635; auto</span>
-											<?php endif; ?>
-											<span style="color:<?php echo $plugin['active'] ? '#1a7f37' : '#b32d2e'; ?>;"><?php echo $plugin['active'] ? ' (active)' : ' (inactive)'; ?></span>
-										</div>
-									</div>
-								<?php endforeach; ?>
-							<?php endforeach; ?>
-						</div>
-					</div>
-				</dialog>
 			<?php endif; ?>
 		</td>
 	<?php
 	}
 
-	// The sidebar's "All Plugins" <dialog>: every plugin found across all
-	// fetched site statuses, one card per plugin (keyed case-insensitively by
-	// name) listing the sites it's installed on. Offline sites contribute
-	// nothing — their status is a WP_Error with no plugin list.
-	public function render_all_plugins_dialog(array $endpoints, array $statuses)
+	// The body of a single site's plugins dialog: active-and-current first,
+	// then the ones with updates waiting, then the inactive ones. Rendered on
+	// demand into the dialog wpchOpenPlugins() builds, never into the page.
+	public function render_plugins_list(array $plugins)
+	{
+		if (! $plugins) {
+			echo '<p style="color:#666;">This site reported no plugins.</p>';
+			return;
+		}
+
+		$plugins_active_no_update = [];
+		$plugins_with_update      = [];
+		$plugins_inactive         = [];
+		foreach ($plugins as $plugin) {
+			if (empty($plugin['active'])) {
+				$plugins_inactive[] = $plugin;
+			} elseif (! empty($plugin['update_available'])) {
+				$plugins_with_update[] = $plugin;
+			} else {
+				$plugins_active_no_update[] = $plugin;
+			}
+		}
+		$plugin_groups = array_filter([$plugins_active_no_update, $plugins_with_update, $plugins_inactive]);
+	?>
+		<div style="display:grid;gap:.8em;max-height:60vh;max-height:60dvb;overflow:auto;padding: 1em;">
+			<?php $is_first_group = true; ?>
+			<?php foreach ($plugin_groups as $plugin_group) : ?>
+				<?php if (! $is_first_group) : ?>
+					<hr style="margin:4px 0;">
+				<?php endif; ?>
+				<?php $is_first_group = false; ?>
+				<?php foreach ($plugin_group as $plugin) : ?>
+					<div class="grid-info<?php echo (! empty($plugin['update_available'])) ? ' updates' : ''; ?>">
+						<?php echo esc_html($plugin['name']); ?>
+						<b><?php echo ' v' . esc_html($plugin['version']); ?></b>
+						<?php if (! empty($plugin['update_available'])) : ?>
+							<span style="color:#c98a00;"> &rarr; update to v<?php echo esc_html($plugin['new_version']); ?> available</span>
+						<?php endif; ?>
+						<div class="updates-info">
+							<?php if (isset($plugin['on_wordpress_org'])) : ?>
+								<span style="color:<?php echo $plugin['on_wordpress_org'] ? '#1a7f37' : '#8250df'; ?>;" title="<?php echo $plugin['on_wordpress_org'] ? 'Found on WordPress.org — likely free' : 'Not found on WordPress.org — likely a premium or custom plugin'; ?>"><?php echo $plugin['on_wordpress_org'] ? ' Free' : ' Premium'; ?></span>
+							<?php endif; ?>
+							<?php if (! empty($plugin['auto_update'])) : ?>
+								<span style="color:#1a7f37;" title="Auto-updates enabled for this plugin"> &#8635; auto</span>
+							<?php endif; ?>
+							<span style="color:<?php echo ! empty($plugin['active']) ? '#1a7f37' : '#b32d2e'; ?>;"><?php echo ! empty($plugin['active']) ? ' (active)' : ' (inactive)'; ?></span>
+						</div>
+					</div>
+				<?php endforeach; ?>
+			<?php endforeach; ?>
+		</div>
+	<?php
+	}
+
+	// The shell of the sidebar's "All Plugins" <dialog>. Its contents are built
+	// by render_all_plugins_grid() on first open (wpch_fetch_all_plugins) —
+	// aggregating every site's plugin list is exactly the kind of work that has
+	// no business happening on a page load nobody asked it of.
+	public function render_all_plugins_dialog()
+	{
+	?>
+		<dialog id="wpch-plugins-dialog" style="min-width:min(900px, 90vw);max-width:90vw;">
+			<div style="padding:16px;">
+				<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+					<strong>All Plugins</strong>
+					<button type="button" commandfor="wpch-plugins-dialog" command="close" class="button close"><?php echo WPCH_Icons::get('close', 18); ?></button>
+				</div>
+				<div id="wpch-all-plugins-body">
+					<p style="color:#666;">Loading&hellip;</p>
+				</div>
+			</div>
+		</dialog>
+	<?php
+	}
+
+	// Every plugin found across $plugin_lists (keyed like $endpoints; each value
+	// is that site's plugin rows or a WP_Error), one card per plugin keyed
+	// case-insensitively by name, listing the sites it's installed on. Offline
+	// sites contribute nothing.
+	public function render_all_plugins_grid(array $endpoints, array $plugin_lists)
 	{
 		$plugins = [];
 		foreach ($endpoints as $i => $endpoint) {
-			$status = $statuses[$i];
-			if (is_wp_error($status) || empty($status['plugins'])) {
+			$list = isset($plugin_lists[$i]) ? $plugin_lists[$i] : null;
+			if (! is_array($list) || ! $list) {
 				continue;
 			}
 			$domain = wp_parse_url($endpoint['url'], PHP_URL_HOST);
 			$site   = $domain ? $domain : $endpoint['url'];
-			foreach ($status['plugins'] as $plugin) {
+			foreach ($list as $plugin) {
 				$key = strtolower($plugin['name']);
 				if (! isset($plugins[$key])) {
 					$plugins[$key] = [
@@ -559,40 +588,34 @@ class WPCH_Admin_Page
 			}
 		}
 		ksort($plugins);
+
+		if (! $plugins) {
+			echo '<p style="color:#666;">No plugin data &mdash; every site is offline or unreachable.</p>';
+			return;
+		}
 	?>
-		<dialog id="wpch-plugins-dialog" style="min-width:min(900px, 90vw);max-width:90vw;">
-			<div style="padding:16px;">
-				<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-					<strong>All Plugins <span class="wpch-total-count"><?php echo count($plugins); ?> total</span></strong>
-					<button type="button" commandfor="wpch-plugins-dialog" command="close" class="button close"><?php echo WPCH_Icons::get('close', 18); ?></button>
+		<p style="margin-top:0;"><span class="wpch-total-count"><?php echo count($plugins); ?> total</span></p>
+		<div class="wpch-all-plugins-grid">
+			<?php foreach ($plugins as $plugin) : ?>
+				<?php
+				// The site list lives in the card's tooltip, one site
+				// per line, so the grid stays compact.
+				$site_lines = [];
+				foreach ($plugin['sites'] as $site => $info) {
+					$site_lines[] = $site . ' — v' . $info['version'] . ($info['active'] ? ' (active)' : ' (inactive)');
+				}
+				?>
+				<div class="wpch-plugin-card" title="<?php echo esc_attr(implode("\n", $site_lines)); ?>">
+					<strong>
+						<?php echo esc_html($plugin['name']); ?>
+						<?php if (null !== $plugin['on_wordpress_org']) : ?>
+							<span style="color:<?php echo $plugin['on_wordpress_org'] ? '#1a7f37' : '#8250df'; ?>;font-size:0.75rem;font-weight:400;" title="<?php echo $plugin['on_wordpress_org'] ? 'Found on WordPress.org — likely free' : 'Not found on WordPress.org — likely a premium or custom plugin'; ?>"><?php echo $plugin['on_wordpress_org'] ? ' Free' : ' Premium'; ?></span>
+						<?php endif; ?>
+					</strong>
+					<span class="wpch-plugin-count"><?php echo count($plugin['sites']); ?> <?php echo 1 === count($plugin['sites']) ? 'site' : 'sites'; ?></span>
 				</div>
-				<?php if (! $plugins) : ?>
-					<p style="color:#666;">No plugin data yet &mdash; statuses haven't been fetched, or every site is offline.</p>
-				<?php else : ?>
-					<div class="wpch-all-plugins-grid">
-						<?php foreach ($plugins as $plugin) : ?>
-							<?php
-							// The site list lives in the card's tooltip, one site
-							// per line, so the grid stays compact.
-							$site_lines = [];
-							foreach ($plugin['sites'] as $site => $info) {
-								$site_lines[] = $site . ' — v' . $info['version'] . ($info['active'] ? ' (active)' : ' (inactive)');
-							}
-							?>
-							<div class="wpch-plugin-card" title="<?php echo esc_attr(implode("\n", $site_lines)); ?>">
-								<strong>
-									<?php echo esc_html($plugin['name']); ?>
-									<?php if (null !== $plugin['on_wordpress_org']) : ?>
-										<span style="color:<?php echo $plugin['on_wordpress_org'] ? '#1a7f37' : '#8250df'; ?>;font-size:0.75rem;font-weight:400;" title="<?php echo $plugin['on_wordpress_org'] ? 'Found on WordPress.org — likely free' : 'Not found on WordPress.org — likely a premium or custom plugin'; ?>"><?php echo $plugin['on_wordpress_org'] ? ' Free' : ' Premium'; ?></span>
-									<?php endif; ?>
-								</strong>
-								<span class="wpch-plugin-count"><?php echo count($plugin['sites']); ?> <?php echo 1 === count($plugin['sites']) ? 'site' : 'sites'; ?></span>
-							</div>
-						<?php endforeach; ?>
-					</div>
-				<?php endif; ?>
-			</div>
-		</dialog>
+			<?php endforeach; ?>
+		</div>
 	<?php
 	}
 
@@ -685,16 +708,22 @@ class WPCH_Admin_Page
 		<?php
 	}
 
-	// $status is the endpoint's decoded payload array, or a WP_Error when the
-	// site was unreachable — it can't be type-hinted on PHP 7.x (no unions).
+	// $status is the endpoint's decoded payload array, a WP_Error when the site
+	// was unreachable, or null when it hasn't been checked yet (page loads
+	// render from cache only — see render_settings_page) — it can't be
+	// type-hinted on PHP 7.x (no unions).
 	public function render_endpoint_row(int $i, array $endpoint, $status, array $folders = [], $position = null, array $domain_counts = [])
 	{
-		$is_error   = is_wp_error($status);
+		$is_pending = null === $status;
+		$is_error   = ! $is_pending && is_wp_error($status);
+		$is_known   = ! $is_pending && ! $is_error;
 		$domain     = wp_parse_url($endpoint['url'], PHP_URL_HOST);
-		$php_status = $is_error ? null : $this->status_checker->php_status($status['php_version']);
-		$php_short  = $is_error ? '' : self::php_short_version($status['php_version']);
-		$wp_status  = $is_error ? null : $this->status_checker->wp_status($status);
-		$health     = $this->status_checker->site_health($is_error, $php_status, $wp_status);
+		$php_status = $is_known ? $this->status_checker->php_status($status['php_version']) : null;
+		$php_short  = $is_known ? self::php_short_version($status['php_version']) : '';
+		$wp_status  = $is_known ? $this->status_checker->wp_status($status) : null;
+		$health     = $is_pending
+			? ['label' => 'Checking…', 'color' => '#50575e']
+			: $this->status_checker->site_health($is_error, $php_status, $wp_status);
 		$folder_id  = isset($endpoint['folder_id']) ? $endpoint['folder_id'] : '';
 		$comments   = isset($endpoint['comments']) && is_array($endpoint['comments']) ? $endpoint['comments'] : [];
 		$tag        = isset($endpoint['tag']) ? $endpoint['tag'] : '';
@@ -717,7 +746,7 @@ class WPCH_Admin_Page
 			}
 		}
 		?>
-			<tr id="wpch-row-<?php echo esc_attr($i); ?>" data-id="<?php echo esc_attr(isset($endpoint['id']) ? $endpoint['id'] : ''); ?>" data-domain="<?php echo esc_attr($row_label); ?>" data-tag="<?php echo esc_attr($tag); ?>" data-wp="<?php echo esc_attr($is_error ? '' : $status['wp_version']); ?>" data-php="<?php echo esc_attr($php_short); ?>" class="child-row" draggable="true">
+			<tr id="wpch-row-<?php echo esc_attr($i); ?>" data-id="<?php echo esc_attr(isset($endpoint['id']) ? $endpoint['id'] : ''); ?>" data-domain="<?php echo esc_attr($row_label); ?>" data-tag="<?php echo esc_attr($tag); ?>" data-wp="<?php echo esc_attr($is_known ? $status['wp_version'] : ''); ?>" data-php="<?php echo esc_attr($php_short); ?>" <?php echo $is_pending ? ' data-pending="1"' : ''; ?> class="child-row<?php echo $is_pending ? ' wpch-row-pending' : ''; ?>" draggable="true">
 				<th scope="row"><?php echo (int) $position; ?></th>
 				<?php $this->render_login_cell(WPCH_Endpoints::login_url_for($endpoint)); ?>
 				<?php
@@ -740,12 +769,14 @@ class WPCH_Admin_Page
 						<small class="wpch-fetch-meta" style="display:inline-flex; margin-left: 1ch;" title="How long this site's status check took. 'cached' means it's shown from the last check instead of a live request — use Refresh for a live pull."><?php echo esc_html(implode(' · ', $meta_bits)); ?></small>
 					<?php endif; */ ?>
 				</td>
-				<?php if ($is_error) : ?>
+				<?php if ($is_pending) : ?>
+					<td colspan="5" style="color:#50575e;">Checking this site&hellip;</td>
+				<?php elseif ($is_error) : ?>
 					<td colspan="5" style="color:#b32d2e;">Error: <?php echo esc_html($status->get_error_message()); ?></td>
 				<?php else : ?>
 					<?php $this->render_wp_cell($status, $wp_status); ?>
 					<?php $this->render_php_cell($status, $php_status); ?>
-					<?php $this->render_plugins_cell('wpch-plugins-' . $i, $row_label, $status); ?>
+					<?php $this->render_plugins_cell($i, $row_label, $status); ?>
 					<?php $this->render_auto_updates_cell($status); ?>
 					<td><?php echo esc_html($status['themes_installed']); ?></td>
 				<?php endif; ?>
@@ -844,9 +875,17 @@ class WPCH_Admin_Page
 			'Offline'         => '#b32d2e',
 		];
 
-		$groups = array_fill_keys(array_keys($tiers), []);
+		$groups  = array_fill_keys(array_keys($tiers), []);
+		$pending = 0;
 		foreach ($endpoints as $i => $endpoint) {
-			$status     = $statuses[$i];
+			$status = $statuses[$i];
+			// Not checked yet (cache-only page load): the site has no tier to
+			// belong to. The client's batched refresh re-renders this whole
+			// block once its status lands, so the tabs fill in as it goes.
+			if (null === $status) {
+				$pending++;
+				continue;
+			}
 			$is_error   = is_wp_error($status);
 			$php_status = $is_error ? null : $this->status_checker->php_status($status['php_version']);
 			$wp_status  = $is_error ? null : $this->status_checker->wp_status($status);
@@ -854,6 +893,9 @@ class WPCH_Admin_Page
 
 			$domain = wp_parse_url($endpoint['url'], PHP_URL_HOST);
 			$groups[$health['label']][] = [
+				// The endpoint's row index, so this row's View Plugins button
+				// opens the same lazily-loaded dialog as the main table's.
+				'index'  => $i,
 				'url'    => $endpoint['url'],
 				'login'  => WPCH_Endpoints::login_url_for($endpoint),
 				'domain' => $domain ? $domain : $endpoint['url'],
@@ -885,6 +927,11 @@ class WPCH_Admin_Page
 								</button>
 							<?php endif; ?>
 						<?php endforeach; ?>
+						<?php if ($pending) : ?>
+							<button type="button" class="wpch-health-tab" disabled title="These sites haven't been checked yet — they are being fetched now">
+								Checking <span class="wpch-health-count"><?php echo (int) $pending; ?></span>
+							</button>
+						<?php endif; ?>
 					</div>
 					<div class="wpch-filters">
 						<label for="wpch-filter-tag">
@@ -942,7 +989,7 @@ class WPCH_Admin_Page
 										<?php else : ?>
 											<?php $this->render_wp_cell($row['status'], $row['wp']['tier']); ?>
 											<?php $this->render_php_cell($row['status'], $row['php']['tier']); ?>
-											<?php $this->render_plugins_cell('wpch-health-plugins-' . sanitize_title($label) . '-' . $n, $row['domain'], $row['status']); ?>
+											<?php $this->render_plugins_cell($row['index'], $row['domain'], $row['status']); ?>
 											<?php $this->render_auto_updates_cell($row['status']); ?>
 										<?php endif; ?>
 									</tr>
@@ -1069,7 +1116,12 @@ class WPCH_Admin_Page
 			$sections      = $this->build_sections($endpoints, $folders);
 			$positions     = $this->compute_positions($endpoints, $folders);
 			$domain_counts = $this->compute_domain_counts($endpoints);
-			$statuses      = $this->status_checker->fetch_statuses($endpoints);
+			// Cache only — the page must never block on the network. Sites with
+			// no fresh cache entry render as "Checking…" rows and admin.js
+			// fetches them right after load, in the same batches of 8 the
+			// Refresh button uses. The prewarm cron (WPCH_Prewarm) normally
+			// keeps every entry warm, so there is usually nothing left to do.
+			$statuses      = $this->status_checker->cached_statuses($endpoints);
 			// This user's expanded/collapsed state per folder group (user meta,
 			// persisted by wp_ajax_wpch_folder_state); unknown ids default to open.
 			$open_states   = $this->folders->get_open_states();
@@ -1084,7 +1136,7 @@ class WPCH_Admin_Page
 						</button>
 						<div class="wpch-side-group">
 							<span class="wpch-side-label">Overview</span>
-							<button type="button" class="wpch-side-btn" command="show-modal" commandfor="wpch-plugins-dialog">
+							<button type="button" class="wpch-side-btn" command="show-modal" commandfor="wpch-plugins-dialog" onclick="wpchLoadAllPlugins()">
 								<?php echo WPCH_Icons::get('plugin', 18); ?> All Plugins
 							</button>
 						</div>
@@ -1145,7 +1197,7 @@ class WPCH_Admin_Page
 						</div>
 					</dialog>
 
-					<?php $this->render_all_plugins_dialog($endpoints, $statuses); ?>
+					<?php $this->render_all_plugins_dialog(); ?>
 				</div>
 				<div class="wpch-main">
 					<?php
@@ -1216,8 +1268,8 @@ class WPCH_Admin_Page
 											<tr>
 												<th scope="col" style="min-width: 45px;">#</th>
 												<th scope="col" style="min-width: 75px;">Login</th>
-												<th scope="col" style="min-width: 300px;">Domain</th>
-												<th scope="col" style="min-width: 220px;">Site Health</th>
+												<th scope="col" style="min-width: 260px;">Domain</th>
+												<th scope="col" style="min-width: 160px;">Site Health</th>
 												<th scope="col" style="min-width: 130px;">WP Version</th>
 												<th scope="col" style="min-width: 110px;">PHP Version</th>
 												<th scope="col" style="min-width: 225px;"><span title="Total / Active / Inactive">Plugins</span></th>
