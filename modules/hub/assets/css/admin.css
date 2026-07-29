@@ -632,11 +632,15 @@ tbody {
 	--background-even: color-mix(in hsl, var(--style), transparent 80%);
 	border: 1px dashed var(--border);
 
-	&:has(input[type='checkbox']:not(:checked)) tr:not(.parent-row) {
+	/* Collapse state comes from the group header's own toggle only. Scoped to
+	   '> .parent-row' deliberately: a bare input[type='checkbox'] descendant
+	   selector also matches checkboxes inside the child rows' edit dialogs,
+	   which would hold every folder shut. */
+	&:has(> .parent-row input[type='checkbox']:not(:checked)) tr:not(.parent-row) {
 		display: none;
 	}
 
-	&:has(input[type='checkbox']:checked) .parent-row {
+	&:has(> .parent-row input[type='checkbox']:checked) .parent-row {
 		border-bottom: 0;
 	}
 }
@@ -766,6 +770,16 @@ tr.child-row.wpch-row-pending {
 	tr.child-row.wpch-row-pending {
 		animation: none;
 	}
+}
+
+/* Rows marked as "not a WordPress site": kept in the table for their folder,
+   tag and comments, but never fetched — dimmed so they read as inert. */
+tr.child-row.wpch-row-off {
+	opacity: 0.6;
+}
+
+tr.child-row.wpch-row-off:hover {
+	opacity: 1;
 }
 tr.child-row:last-child {
 	anchor-name: --last-folder-item;

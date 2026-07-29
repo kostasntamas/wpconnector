@@ -281,6 +281,9 @@ class WPCH_Admin_Page
 				'folder_id' => isset($row['folder_id']) ? sanitize_text_field($row['folder_id']) : '',
 				'comments'  => $comments,
 				'tag'       => isset($row['tag']) && is_string($row['tag']) ? WPCH_Endpoints::sanitize_tag($row['tag']) : '',
+				// Exports predating the toggle have no 'monitored' key — those
+				// rows are monitored, same as they were on the source hub.
+				'monitored' => isset($row['monitored']) && ! $row['monitored'] ? 0 : 1,
 				'order'     => $order,
 			];
 		}
@@ -709,21 +712,27 @@ class WPCH_Admin_Page
 	}
 
 	// $status is the endpoint's decoded payload array, a WP_Error when the site
-	// was unreachable, or null when it hasn't been checked yet (page loads
-	// render from cache only — see render_settings_page) — it can't be
+	// was unreachable, null when it hasn't been checked yet (page loads
+	// render from cache only — see render_settings_page), or false when the row
+	// is switched off (WPCH_Endpoints::is_monitored()) — it can't be
 	// type-hinted on PHP 7.x (no unions).
 	public function render_endpoint_row(int $i, array $endpoint, $status, array $folders = [], $position = null, array $domain_counts = [])
 	{
+		$is_off     = false === $status;
 		$is_pending = null === $status;
-		$is_error   = ! $is_pending && is_wp_error($status);
-		$is_known   = ! $is_pending && ! $is_error;
+		$is_error   = ! $is_off && ! $is_pending && is_wp_error($status);
+		$is_known   = ! $is_off && ! $is_pending && ! $is_error;
 		$domain     = wp_parse_url($endpoint['url'], PHP_URL_HOST);
 		$php_status = $is_known ? $this->status_checker->php_status($status['php_version']) : null;
 		$php_short  = $is_known ? self::php_short_version($status['php_version']) : '';
 		$wp_status  = $is_known ? $this->status_checker->wp_status($status) : null;
-		$health     = $is_pending
-			? ['label' => 'Checking…', 'color' => '#50575e']
-			: $this->status_checker->site_health($is_error, $php_status, $wp_status);
+		if ($is_off) {
+			$health = ['label' => 'Not monitored', 'color' => '#50575e'];
+		} elseif ($is_pending) {
+			$health = ['label' => 'Checking…', 'color' => '#50575e'];
+		} else {
+			$health = $this->status_checker->site_health($is_error, $php_status, $wp_status);
+		}
 		$folder_id  = isset($endpoint['folder_id']) ? $endpoint['folder_id'] : '';
 		$comments   = isset($endpoint['comments']) && is_array($endpoint['comments']) ? $endpoint['comments'] : [];
 		$tag        = isset($endpoint['tag']) ? $endpoint['tag'] : '';
@@ -746,7 +755,7 @@ class WPCH_Admin_Page
 			}
 		}
 		?>
-			<tr id="wpch-row-<?php echo esc_attr($i); ?>" data-id="<?php echo esc_attr(isset($endpoint['id']) ? $endpoint['id'] : ''); ?>" data-domain="<?php echo esc_attr($row_label); ?>" data-tag="<?php echo esc_attr($tag); ?>" data-wp="<?php echo esc_attr($is_known ? $status['wp_version'] : ''); ?>" data-php="<?php echo esc_attr($php_short); ?>" <?php echo $is_pending ? ' data-pending="1"' : ''; ?> class="child-row<?php echo $is_pending ? ' wpch-row-pending' : ''; ?>" draggable="true">
+			<tr id="wpch-row-<?php echo esc_attr($i); ?>" data-id="<?php echo esc_attr(isset($endpoint['id']) ? $endpoint['id'] : ''); ?>" data-domain="<?php echo esc_attr($row_label); ?>" data-tag="<?php echo esc_attr($tag); ?>" data-wp="<?php echo esc_attr($is_known ? $status['wp_version'] : ''); ?>" data-php="<?php echo esc_attr($php_short); ?>" <?php echo $is_pending ? ' data-pending="1"' : ''; ?> class="child-row<?php echo $is_pending ? ' wpch-row-pending' : ''; ?><?php echo $is_off ? ' wpch-row-off' : ''; ?>" draggable="true">
 				<th scope="row"><?php echo (int) $position; ?></th>
 				<?php $this->render_login_cell(WPCH_Endpoints::login_url_for($endpoint)); ?>
 				<?php
@@ -769,7 +778,9 @@ class WPCH_Admin_Page
 						<small class="wpch-fetch-meta" style="display:inline-flex; margin-left: 1ch;" title="How long this site's status check took. 'cached' means it's shown from the last check instead of a live request — use Refresh for a live pull."><?php echo esc_html(implode(' · ', $meta_bits)); ?></small>
 					<?php endif; */ ?>
 				</td>
-				<?php if ($is_pending) : ?>
+				<?php if ($is_off) : ?>
+					<td colspan="5" style="color:#50575e;">Status checks are switched off for this site &mdash; edit the row to turn them back on.</td>
+				<?php elseif ($is_pending) : ?>
 					<td colspan="5" style="color:#50575e;">Checking this site&hellip;</td>
 				<?php elseif ($is_error) : ?>
 					<td colspan="5" style="color:#b32d2e;">Error: <?php echo esc_html($status->get_error_message()); ?></td>
@@ -785,9 +796,18 @@ class WPCH_Admin_Page
 						<button type="button" class="button edit-button" title="Edit row" command="show-modal" commandfor="wpch-edit-dialog-<?php echo esc_attr($i); ?>">
 							<?php echo WPCH_Icons::get('edit', 20); ?>
 						</button>
-						<button type="button" class="button refresh-row" title="Refresh this site only" data-index="<?php echo (int) $i; ?>">
-							<?php echo WPCH_Icons::get('refresh', 20); ?>
-						</button>
+						<?php
+						// A switched-off row has no refresh button at all: the
+						// Refresh button and the on-load pending sweep both build
+						// their index lists from '.refresh-row' (wpchRowIndexes()
+						// in admin.js), so leaving it out is what keeps those rows
+						// out of every batch.
+						?>
+						<?php if (! $is_off) : ?>
+							<button type="button" class="button refresh-row" title="Refresh this site only" data-index="<?php echo (int) $i; ?>">
+								<?php echo WPCH_Icons::get('refresh', 20); ?>
+							</button>
+						<?php endif; ?>
 						<button type="button" title="Add Comments" class="button comment-btn" onclick="wpchOpenComment(<?php echo (int) $i; ?>)"><?php echo $comment_icon; ?><?php if ($comments) : ?><span class="wpch-comment-count"><?php echo count($comments); ?></span><?php endif; ?></button>
 						<a title="Delete row" href="<?php echo esc_url(wp_nonce_url(add_query_arg('wpch_delete', $i), 'wpch_delete_' . $i)); ?>" class="wpch-delete-link" data-index="<?php echo esc_attr($i); ?>" data-folder-id="<?php echo esc_attr($folder_id); ?>" style="color:#b32d2e;"><?php echo WPCH_Icons::get('trash', 20); ?></a>
 						<button title="Move row" type="button" class="move">
@@ -826,6 +846,10 @@ class WPCH_Admin_Page
 											<option value="<?php echo esc_attr($slug); ?>" <?php selected($tag, $slug); ?>><?php echo esc_html($preset['label']); ?></option>
 										<?php endforeach; ?>
 									</select>
+								</label>
+								<label style="text-align: start;display:flex;align-items:flex-start;gap:8px;" title="Tick this for sites that aren't WordPress (another CMS, a static site). The row stays in the table with its folder, tag and comments, but its status is never fetched.">
+									<input type="checkbox" id="wpch-edit-unmonitored-<?php echo esc_attr($i); ?>" <?php checked(! WPCH_Endpoints::is_monitored($endpoint)); ?>>
+									<span>Not a WordPress site <small style="display:block;font-weight:400;color:#666;">Skip status checks for this row</small></span>
 								</label>
 								<button type="button" class="button button-primary" style="margin-top: 1em;" onclick="wpchSaveEndpointEdit(<?php echo (int) $i; ?>)">Save</button>
 							</div>
@@ -877,8 +901,15 @@ class WPCH_Admin_Page
 
 		$groups  = array_fill_keys(array_keys($tiers), []);
 		$pending = 0;
+		$off     = 0;
 		foreach ($endpoints as $i => $endpoint) {
 			$status = $statuses[$i];
+			// Switched off (not a WordPress site): never fetched, so it has no
+			// health to grade — counted on its own pill instead of a tier.
+			if (false === $status) {
+				$off++;
+				continue;
+			}
 			// Not checked yet (cache-only page load): the site has no tier to
 			// belong to. The client's batched refresh re-renders this whole
 			// block once its status lands, so the tabs fill in as it goes.
@@ -932,6 +963,11 @@ class WPCH_Admin_Page
 								Checking <span class="wpch-health-count"><?php echo (int) $pending; ?></span>
 							</button>
 						<?php endif; ?>
+						<?php if ($off) : ?>
+							<button type="button" class="wpch-health-tab" disabled title="These rows are marked as not WordPress — their status is never fetched">
+								Not monitored <span class="wpch-health-count"><?php echo (int) $off; ?></span>
+							</button>
+						<?php endif; ?>
 					</div>
 					<div class="wpch-filters">
 						<label for="wpch-filter-tag">
@@ -970,6 +1006,15 @@ class WPCH_Admin_Page
 									<th scope="col">Domain</th>
 									<?php if ('Offline' === $label) : ?>
 										<th scope="col">Error</th>
+										<?php
+										// Offline is the tier you actually act on: a site is
+										// usually here because its URL or secret key is wrong,
+										// or the endpoint module isn't set up yet. The row's
+										// own edit dialog and re-check button are surfaced
+										// here so that can be fixed without hunting the site
+										// down in the main table first.
+										?>
+										<th scope="col" style="min-width: 110px;">Settings</th>
 									<?php else : ?>
 										<th scope="col">WP Version</th>
 										<th scope="col">PHP Version</th>
@@ -986,6 +1031,23 @@ class WPCH_Admin_Page
 										<?php $this->render_domain_cell($row['url'], $row['domain'], $row['tag']); ?>
 										<?php if ('Offline' === $label) : ?>
 											<td style="text-align: left"><?php echo esc_html($row['error']); ?></td>
+											<td>
+												<div class="edits" style="justify-content:center;">
+													<?php
+													// Both buttons drive the main table's row: the
+													// edit dialog is that row's one dialog, moved
+													// out of the (hidden) main-table panel by
+													// wpchOpenEndpointEdit() so it can render on
+													// top of this tab.
+													?>
+													<button type="button" class="button edit-button" title="Edit this site's URL, secret key and settings" onclick="wpchOpenEndpointEdit(<?php echo (int) $row['index']; ?>)">
+														<?php echo WPCH_Icons::get('edit', 20); ?>
+													</button>
+													<button type="button" class="button refresh-row" title="Check this site again" data-index="<?php echo (int) $row['index']; ?>">
+														<?php echo WPCH_Icons::get('refresh', 20); ?>
+													</button>
+												</div>
+											</td>
 										<?php else : ?>
 											<?php $this->render_wp_cell($row['status'], $row['wp']['tier']); ?>
 											<?php $this->render_php_cell($row['status'], $row['php']['tier']); ?>
@@ -1176,6 +1238,10 @@ class WPCH_Admin_Page
 								<div class="spacing" style="display:flex;flex-direction:column;align-items:flex-start;">
 									<?php $this->render_folder_picker_fields('add', $folders); ?>
 								</div>
+								<label style="text-align: start;display:flex;align-items:flex-start;gap:8px;" title="Tick this for sites that aren't WordPress (another CMS, a static site). The row stays in the table with its folder, tag and comments, but its status is never fetched.">
+									<input type="checkbox" name="new_unmonitored" value="1">
+									<span>Not a WordPress site <small style="display:block;font-weight:400;color:#666;">Skip status checks for this row</small></span>
+								</label>
 								<button type="submit" class="button button-primary" style="margin-top:1em;">Add Site</button>
 							</form>
 						</div>

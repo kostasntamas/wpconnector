@@ -62,6 +62,11 @@ class WPCH_Ajax
 		if (is_wp_error($list)) {
 			wp_send_json_error(['message' => 'Could not read this site\'s plugins: ' . $list->get_error_message()]);
 		}
+		// false = the row is switched off, so nothing was fetched. Its cells
+		// carry no View Plugins button, but the dialog is reachable by index.
+		if (! is_array($list)) {
+			wp_send_json_error(['message' => 'Status checks are switched off for this site.']);
+		}
 
 		ob_start();
 		$this->admin_page->render_plugins_list($list);
@@ -198,21 +203,38 @@ class WPCH_Ajax
 
 	// Shared success tail of add/update: the freshly-rendered row for the
 	// client to swap in place (section/folder changes take the reload:true
-	// path before getting here).
+	// path before getting here), plus the re-rendered health tabs.
+	//
+	// The tabs matter here, not just on refresh: an edit is how an Offline site
+	// gets fixed (wrong key, wrong URL, endpoint module not set up), and that
+	// edit can be launched from the Offline tab itself — leaving the tabs alone
+	// would keep showing the site as broken until the next full Refresh.
 	private function send_row(int $index, array $endpoints)
 	{
 		$all_folders   = $this->folders->get_all();
-		$statuses      = $this->status_checker->fetch_statuses([$index => $endpoints[$index]]);
-		$positions     = $this->admin_page->compute_positions($endpoints, $all_folders);
-		$domain_counts = $this->admin_page->compute_domain_counts($endpoints);
+		// The other sites come from the cache purely so the tabs can regroup —
+		// same rule as refresh_statuses(), one edited row never drags the whole
+		// list onto the wire. This row is fetched second because fetch_statuses()
+		// leaves the per-endpoint timing metadata render_endpoint_row() reads
+		// behind it (an edited url/key misses the cache and goes live anyway).
+		$statuses         = $this->status_checker->cached_statuses($endpoints);
+		$fetched          = $this->status_checker->fetch_statuses([$index => $endpoints[$index]]);
+		$statuses[$index] = $fetched[$index];
+		$positions        = $this->admin_page->compute_positions($endpoints, $all_folders);
+		$domain_counts    = $this->admin_page->compute_domain_counts($endpoints);
 
 		ob_start();
 		$this->admin_page->render_endpoint_row($index, $endpoints[$index], $statuses[$index], $all_folders, $positions[$index], $domain_counts);
+		$row_html = ob_get_clean();
+
+		ob_start();
+		$this->admin_page->render_health_tabs($endpoints, $statuses);
 
 		wp_send_json_success([
-			'reload'    => false,
-			'folder_id' => isset($endpoints[$index]['folder_id']) ? $endpoints[$index]['folder_id'] : '',
-			'row_html'  => ob_get_clean(),
+			'reload'      => false,
+			'folder_id'   => isset($endpoints[$index]['folder_id']) ? $endpoints[$index]['folder_id'] : '',
+			'row_html'    => $row_html,
+			'health_tabs' => ob_get_clean(),
 		]);
 	}
 
@@ -240,6 +262,12 @@ class WPCH_Ajax
 		// edit_tag is absent from older cached JS — leave the stored tag alone then.
 		if (isset($_POST['edit_tag']) && is_string($_POST['edit_tag'])) {
 			$endpoints[$index]['tag'] = WPCH_Endpoints::sanitize_tag(wp_unslash($_POST['edit_tag']));
+		}
+		// Sent as an explicit '1'/'0' rather than as a checkbox's presence, so
+		// older cached JS (which sends neither) leaves the stored value alone
+		// instead of silently switching monitoring back on.
+		if (isset($_POST['edit_unmonitored'])) {
+			$endpoints[$index]['monitored'] = '1' === (string) $_POST['edit_unmonitored'] ? 0 : 1;
 		}
 		// Same guard for edit_login_url ('' clears the override back to the default).
 		if (isset($_POST['edit_login_url']) && is_string($_POST['edit_login_url'])) {

@@ -128,7 +128,8 @@ class WPCH_Status_Checker
 
 	// Statuses that are already cached and still fresh, keyed like $endpoints;
 	// a site with no usable entry comes back as null, meaning "not checked
-	// yet". Never touches the network. This is what the hub page renders on
+	// yet", and one the user switched off comes back as false, meaning "never
+	// checked at all". Never touches the network. This is what the hub page renders on
 	// load — the null rows are filled in right afterwards by the client's
 	// batched wpch_refresh_statuses calls (see admin.js), so opening the page
 	// no longer blocks on every site answering.
@@ -142,6 +143,11 @@ class WPCH_Status_Checker
 		$now      = time();
 
 		foreach ($endpoints as $i => $endpoint) {
+			if (! WPCH_Endpoints::is_monitored($endpoint)) {
+				$statuses[$i] = false;
+				continue;
+			}
+
 			if ('' === trim($endpoint['key'])) {
 				$statuses[$i] = new WP_Error('missing_key', 'No secret key configured');
 				continue;
@@ -247,6 +253,14 @@ class WPCH_Status_Checker
 		];
 
 		foreach ($endpoints as $i => $endpoint) {
+			// Rows the user switched off (not a WordPress site) never go to the
+			// network, whatever asked for them — page load, Refresh button or
+			// prewarm cron all come through here.
+			if (! WPCH_Endpoints::is_monitored($endpoint)) {
+				$statuses[$i] = false;
+				continue;
+			}
+
 			// A blank key can never authenticate against the remote endpoint —
 			// skip the network round trip entirely instead of waiting out a
 			// timeout for a request that's guaranteed to fail.

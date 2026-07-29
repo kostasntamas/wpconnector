@@ -107,6 +107,18 @@ class WPCH_Endpoints
 		];
 	}
 
+	// Whether this row takes part in status/plugin fetching at all. Rows for
+	// sites that aren't WordPress (another CMS, a static site) are switched off
+	// from the Add form and the row's edit dialog: they stay in the table with
+	// their folder, tag and comments, but nothing ever requests them — not the
+	// hub page, not the Refresh button, not the prewarm cron. Stored as
+	// 'monitored' (1/0); rows saved before this option existed have no such key
+	// and are monitored, like they always were.
+	public static function is_monitored(array $endpoint): bool
+	{
+		return ! isset($endpoint['monitored']) || $endpoint['monitored'];
+	}
+
 	// Whitelists a tag value against tag_presets(); anything unknown becomes ''.
 	public static function sanitize_tag(string $tag): string
 	{
@@ -128,6 +140,9 @@ class WPCH_Endpoints
 			'folder_id' => $folders->resolve_choice($post),
 			'comments'  => [],
 			'tag'       => '',
+			// The form's checkbox is the negative ("this isn't a WordPress
+			// site"), so leaving it alone gives the normal monitored row.
+			'monitored' => empty($post['new_unmonitored']) ? 1 : 0,
 		];
 	}
 

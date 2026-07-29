@@ -45,6 +45,43 @@ function wpchPost(action, fields) {
 		});
 }
 
+// Opens a row's edit dialog from outside the main table — currently the
+// Offline tab's edit button. The dialog is rendered inside its row, and
+// switching tabs sets `hidden` on the whole main-table panel: a <dialog> under
+// a display:none ancestor has nothing to paint, so showModal() there would open
+// an invisible modal. Moving it into #wpch-dialogs (which sits outside every
+// panel, like the folder dialogs already do) fixes that for good — id lookups,
+// commandfor and wpchSaveEndpointEdit() all resolve it document-wide, so the
+// main table's own edit button keeps working on the relocated node.
+function wpchOpenEndpointEdit(index) {
+	const dialog = document.getElementById('wpch-edit-dialog-' + index);
+	if (!dialog) {
+		return;
+	}
+
+	const host = document.getElementById('wpch-dialogs');
+	if (host && dialog.parentNode !== host) {
+		host.appendChild(dialog); // a move, not a copy — never two of this id
+	}
+
+	dialog.showModal();
+}
+
+// Discards a relocated edit dialog before its row is replaced with freshly
+// rendered markup (which brings its own copy along) — otherwise the old one
+// lingers in #wpch-dialogs as a duplicate id shadowing nothing.
+function wpchDropRelocatedEditDialog(index) {
+	const host = document.getElementById('wpch-dialogs');
+	const stale = host ? host.querySelector('[id="wpch-edit-dialog-' + index + '"]') : null;
+	if (!stale) {
+		return;
+	}
+	if (stale.open) {
+		stale.close();
+	}
+	stale.remove();
+}
+
 function wpchSaveEndpointEdit(index) {
 	const dialog = document.getElementById('wpch-edit-dialog-' + index);
 	if (!dialog) {
@@ -55,6 +92,7 @@ function wpchSaveEndpointEdit(index) {
 	const keyInput = document.getElementById('wpch-edit-key-' + index);
 	const loginInput = document.getElementById('wpch-edit-login-' + index);
 	const tagSelect = document.getElementById('wpch-edit-tag-' + index);
+	const unmonitored = document.getElementById('wpch-edit-unmonitored-' + index);
 	const folderSelect = dialog.querySelector('select[name="folder_choice"]');
 
 	const fields = {
@@ -67,6 +105,11 @@ function wpchSaveEndpointEdit(index) {
 	}
 	if (tagSelect) {
 		fields.edit_tag = tagSelect.value;
+	}
+	// Explicit '1'/'0' — a checkbox that simply isn't sent when unticked would
+	// be indistinguishable server-side from an older page that has no such box.
+	if (unmonitored) {
+		fields.edit_unmonitored = unmonitored.checked ? '1' : '0';
 	}
 
 	if (folderSelect) {
@@ -93,11 +136,16 @@ function wpchSaveEndpointEdit(index) {
 				window.location.reload();
 				return;
 			}
+			wpchDropRelocatedEditDialog(index);
 			const row = document.getElementById('wpch-row-' + index);
 			if (row) {
 				row.outerHTML = data.row_html;
 			}
 			wpchRenumberRows();
+			// An edit can move the site between health tiers (fixing a wrong key
+			// takes it straight out of Offline), so the tabs come back re-rendered
+			// with it — the edit may well have been launched from one of them.
+			wpchReplaceHealthTabs(data.health_tabs);
 		})
 		.catch(function (err) {
 			alert(err.message || 'Could not save changes. Please try again.');
@@ -156,9 +204,11 @@ function wpchInsertRow(data) {
 
 	targetBody.insertAdjacentHTML('beforeend', data.row_html);
 	wpchRenumberRows();
+	wpchReplaceHealthTabs(data.health_tabs);
 }
 
 function wpchRemoveRow(index) {
+	wpchDropRelocatedEditDialog(index);
 	const row = document.getElementById('wpch-row-' + index);
 	const tbody = row ? row.closest('tbody') : null;
 	if (row) {
@@ -243,6 +293,7 @@ function wpchRefreshStatuses(index, indexes, silent) {
 	return wpchPost('wpch_refresh_statuses', fields)
 		.then(function (data) {
 			Object.keys(data.rows).forEach(function (i) {
+				wpchDropRelocatedEditDialog(i);
 				const row = document.getElementById('wpch-row-' + i);
 				if (row) {
 					row.outerHTML = data.rows[i];
@@ -270,7 +321,10 @@ const WPCH_REFRESH_BATCH_SIZE = 8;
 
 // Row indexes currently in the table, in DOM order. Read from the DOM rather
 // than a stored count: it's already the source of truth for which rows exist,
-// and matches server-side indexes 1:1 (see render_endpoint_row()).
+// and matches server-side indexes 1:1 (see render_endpoint_row()). Callers
+// scope their selector to #wpch-status-table — the Offline tab carries
+// .refresh-row buttons for the same endpoints, and an unscoped selector would
+// put those indexes in the batch a second time.
 function wpchRowIndexes(selector) {
 	return Array.prototype.map.call(document.querySelectorAll(selector), function (el) {
 		return el.getAttribute('data-index');
@@ -324,7 +378,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	const refreshBtn = document.getElementById('wpch-refresh-btn');
 	if (refreshBtn) {
 		refreshBtn.addEventListener('click', function () {
-			wpchRunBatchedRefresh(wpchRowIndexes('.refresh-row'), 'Refreshing');
+			wpchRunBatchedRefresh(wpchRowIndexes('#wpch-status-table .refresh-row'), 'Refreshing');
 		});
 	}
 
@@ -333,7 +387,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	// Those sites are fetched here instead, in the background and in batches,
 	// with the rows filling in as the answers arrive. Normally the prewarm cron
 	// has already warmed the cache and there is nothing pending at all.
-	const pending = wpchRowIndexes('tr[data-pending="1"] .refresh-row');
+	const pending = wpchRowIndexes('#wpch-status-table tr[data-pending="1"] .refresh-row');
 	if (pending.length) {
 		wpchRunBatchedRefresh(pending, 'Checking', true);
 	}
