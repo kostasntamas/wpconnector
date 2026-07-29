@@ -14,6 +14,10 @@ if (! defined('ABSPATH')) {
  *   when someone actually opens a plugins dialog on the hub. Before 2.3.7 this
  *   list travelled inside the status payload, which made the hub's status
  *   cache (and its rendered HTML) many times larger than it needed to be.
+ * - /wp-json/wpconnector/v1/users   — the account list (names, addresses,
+ *   privileges and the suspicion flags from WPCE_User_Audit), on the same
+ *   on-demand footing as /plugins. The status payload carries only the counts,
+ *   so no personal data travels on the polled route.
  */
 class WPCE_Rest_Controller
 {
@@ -28,6 +32,12 @@ class WPCE_Rest_Controller
 		register_rest_route('wpconnector/v1', '/plugins', [
 			'methods'             => 'GET',
 			'callback'            => [$this, 'plugins_callback'],
+			'permission_callback' => [$this, 'permission_check'],
+		]);
+
+		register_rest_route('wpconnector/v1', '/users', [
+			'methods'             => 'GET',
+			'callback'            => [$this, 'users_callback'],
 			'permission_callback' => [$this, 'permission_check'],
 		]);
 	}
@@ -183,6 +193,10 @@ class WPCE_Rest_Controller
 			}
 		}
 
+		// Counts only, like the plugin fields above: who those users are lives
+		// on the /users route, so no name or address is sent on a polled route.
+		$users = (new WPCE_User_Audit())->summary();
+
 		// No 'plugins' key: the per-plugin list lives on the /plugins route.
 		return [
 			'domain'                        => home_url(),
@@ -197,7 +211,19 @@ class WPCE_Rest_Controller
 			'plugins_auto_update'           => $plugins_auto_count,
 			'plugins_auto_update_supported' => $plugin_auto_supported,
 			'themes_installed'              => count(wp_get_themes()),
+			'users_total'                   => $users['users_total'],
+			'users_admins'                  => $users['users_admins'],
+			'users_flagged'                 => $users['users_flagged'],
+			'users_high'                    => $users['users_high'],
 		];
+	}
+
+	// The account list behind the hub's Users dialog: display name, address,
+	// roles/privileges, and the WPCE_User_Audit flags that mark an account as
+	// worth looking at. Requested only when someone opens that dialog.
+	public function users_callback(): array
+	{
+		return (new WPCE_User_Audit())->users();
 	}
 
 	// The full per-plugin list, on its own route so the status poll stays small.

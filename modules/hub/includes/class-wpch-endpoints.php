@@ -321,6 +321,14 @@ class WPCH_Endpoints
 		return self::strip_status_path($endpoint_url) . '/wp-json/wpconnector/v1/plugins';
 	}
 
+	// The sibling /users route (endpoint module 2.3.9+), on the same on-demand
+	// footing as /plugins: the polled status payload carries user counts only,
+	// never a name or an address.
+	public static function users_url(string $endpoint_url): string
+	{
+		return self::strip_status_path($endpoint_url) . '/wp-json/wpconnector/v1/users';
+	}
+
 	// The row's Login link: the endpoint's own 'login_url' when one is set,
 	// otherwise the shared default (/wp-admin/ on the site's base URL).
 	public static function login_url_for(array $endpoint): string

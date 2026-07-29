@@ -393,20 +393,20 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 });
 
-// ---- Plugin dialogs ----
-// Plugin lists are not part of the page: the status payload carries only the
-// total/active/inactive counts, and the list itself is fetched from the site's
-// /plugins route the first time someone opens a dialog. That keeps every site's
-// full plugin list out of the page HTML (where it used to be rendered twice per
-// site, once for the main row and once for the health-tab row) and out of the
-// status cache the hub reads on every load.
+// ---- Per-row list dialogs (Plugins, Users) ----
+// Neither list is part of the page: the status payload carries only counts, and
+// the list itself is fetched from the site's /plugins or /users route the first
+// time someone opens a dialog. That keeps every site's full list out of the page
+// HTML (where the plugin list used to be rendered twice per site, once for the
+// main row and once for the health-tab row) and out of the status cache the hub
+// reads on every load.
 
 // Rows can be swapped in by AJAX, so the dialogs are created here rather than
-// rendered server-side — one per endpoint index, reused by the main table row
-// and that endpoint's health-tab row, and kept after loading so reopening is
-// instant.
-function wpchPluginsDialog(index, label) {
-	const id = 'wpch-plugins-' + index;
+// rendered server-side — one per kind per endpoint index, reused by the main
+// table row and that endpoint's health-tab row, and kept after loading so
+// reopening is instant.
+function wpchListDialog(kind, index, label, heading) {
+	const id = 'wpch-' + kind + '-' + index;
 	const existing = document.getElementById(id);
 	if (existing) {
 		return existing;
@@ -426,7 +426,7 @@ function wpchPluginsDialog(index, label) {
 	});
 
 	const title = document.createElement('strong');
-	title.textContent = label + ' — Plugins';
+	title.textContent = label + ' — ' + heading;
 
 	const header = document.createElement('div');
 	header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;';
@@ -434,7 +434,7 @@ function wpchPluginsDialog(index, label) {
 	header.appendChild(close);
 
 	const body = document.createElement('div');
-	body.className = 'wpch-plugins-body';
+	body.className = 'wpch-' + kind + '-body';
 	body.innerHTML = '<p style="color:#666;">Loading…</p>';
 
 	const wrap = document.createElement('div');
@@ -447,24 +447,33 @@ function wpchPluginsDialog(index, label) {
 	return dialog;
 }
 
-function wpchOpenPlugins(index, label) {
-	const dialog = wpchPluginsDialog(index, label);
+// Opens (building it first if needed) a row's list dialog and fills it once.
+function wpchOpenList(kind, index, label, heading, action, failure) {
+	const dialog = wpchListDialog(kind, index, label, heading);
 	dialog.showModal();
 
 	if (dialog.dataset.loaded) {
 		return;
 	}
 
-	const body = dialog.querySelector('.wpch-plugins-body');
-	wpchPost('wpch_fetch_plugins', { index: index })
+	const body = dialog.querySelector('.wpch-' + kind + '-body');
+	wpchPost(action, { index: index })
 		.then(function (data) {
 			body.innerHTML = data.html;
 			dialog.dataset.loaded = '1';
 		})
 		.catch(function (err) {
 			// Left unmarked so closing and reopening retries.
-			body.textContent = err.message || 'Could not load this site’s plugins.';
+			body.textContent = err.message || failure;
 		});
+}
+
+function wpchOpenPlugins(index, label) {
+	wpchOpenList('plugins', index, label, 'Plugins', 'wpch_fetch_plugins', 'Could not load this site’s plugins.');
+}
+
+function wpchOpenUsers(index, label) {
+	wpchOpenList('users', index, label, 'Users', 'wpch_fetch_users', 'Could not load this site’s users.');
 }
 
 // The sidebar's All Plugins grid, aggregated server-side across every site.

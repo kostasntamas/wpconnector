@@ -50,6 +50,72 @@
 	white-space: nowrap;
 }
 
+/* A row's Users dialog: one card per account, flagged ones first and marked
+   with a colored edge (see WPCE_User_Audit for what earns a flag). */
+.wpch-users-list {
+	display: grid;
+	gap: 0.6em;
+	max-height: 60vh;
+	max-height: 60dvb;
+	overflow: auto;
+	padding: 1em;
+}
+
+.wpch-user-card {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	gap: 0.3em 1.3rem;
+	text-align: start;
+	padding: 0.5em 0.8em;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-inline-start: 3px solid var(--flag-color, #dcdcde);
+	border-radius: var(--radius-s);
+}
+
+.wpch-user-card.is-flagged {
+	background: color-mix(in srgb, var(--flag-color) 6%, #fff);
+}
+
+.wpch-user-id {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0.2em 1ch;
+	min-inline-size: 0;
+	overflow-wrap: anywhere;
+}
+
+.wpch-user-roles {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	flex-wrap: wrap;
+	gap: 0.4em;
+}
+
+.wpch-role {
+	font-size: 0.75rem;
+	padding: 0.15em 0.6em;
+	color: #3c434a;
+	background: #f0f0f1;
+	border: 1px solid #dcdcde;
+	border-radius: var(--radius-s);
+	white-space: nowrap;
+}
+
+.wpch-role.is-admin {
+	color: #fff;
+	background: #00325c;
+	border-color: #00325c;
+}
+
+/* The flag list spans both columns, under the name and the roles. */
+.wpch-user-flags {
+	grid-column: 1 / -1;
+	font-size: 0.85em;
+}
+
 .wpch-sidebar {
 	inline-size: auto;
 	flex-shrink: 0;

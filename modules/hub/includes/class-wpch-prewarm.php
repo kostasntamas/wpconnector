@@ -108,11 +108,13 @@ class WPCH_Prewarm
 
 		$this->status_checker->fetch_statuses($endpoints, true);
 
-		// Plugin lists are refreshed opportunistically, not forced: their cache
-		// has a much longer TTL, so this only goes to the network for the sites
-		// whose list has actually aged out. That keeps the All Plugins dialog
-		// instant without polling every site's plugin route every ten minutes.
+		// Plugin and user lists are refreshed opportunistically, not forced:
+		// their caches have much longer TTLs, so this only goes to the network
+		// for the sites whose list has actually aged out. That keeps the All
+		// Plugins and per-site Users dialogs instant without polling every
+		// site's plugin and user routes every ten minutes.
 		$this->status_checker->fetch_plugins($endpoints);
+		$this->status_checker->fetch_users($endpoints);
 
 		$this->status_checker->prune_cache($endpoints);
 

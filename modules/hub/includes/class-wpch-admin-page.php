@@ -538,6 +538,128 @@ class WPCH_Admin_Page
 	<?php
 	}
 
+	// The Users <td>: total / administrator counts from the status payload,
+	// the "look at this site" indicator when the endpoint flagged accounts, and
+	// a "View Users" button. Like the plugins cell, the list itself is not in
+	// the page — wpchOpenUsers() fetches it on first open (wpch_fetch_users /
+	// render_users_list), and the main-table row and the health-tab row share
+	// one dialog by passing the same $index.
+	public function render_users_cell(int $index, string $row_label, array $status)
+	{
+		// Endpoints before 2.3.9 don't report users at all — an em dash, not a
+		// zero, which would read as "this site has no accounts".
+		if (! isset($status['users_total'])) {
+	?>
+			<td><span title="This site's WP Connector endpoint is too old to report users — update it to see them.">&mdash;</span></td>
+		<?php
+			return;
+		}
+
+		$total   = (int) $status['users_total'];
+		$admins  = isset($status['users_admins']) ? (int) $status['users_admins'] : 0;
+		$flagged = isset($status['users_flagged']) ? (int) $status['users_flagged'] : 0;
+		// Red only for accounts that tripped enough signals to be worth
+		// treating as a possible break-in; a single soft flag (a new
+		// administrator, an odd username) stays amber so the red one means
+		// something when it does show up.
+		$high    = isset($status['users_high']) ? (int) $status['users_high'] : 0;
+		$color   = $high ? '#b32d2e' : '#c98a00';
+		$hint    = $high
+			? $high . ' ' . (1 === $high ? 'account looks' : 'accounts look') . ' like it could belong to an intruder'
+			: $flagged . ' ' . (1 === $flagged ? 'account is' : 'accounts are') . ' worth a look';
+		?>
+		<td>
+			<div style="display:flex;align-items:center;justify-content:center;gap:1ch;">
+				<span>
+					<strong title="Total accounts"><?php echo esc_html($total); ?></strong>
+					/
+					<strong title="Accounts with administrator-level privileges"><?php echo esc_html($admins); ?></strong>
+				</span>
+				<?php if ($flagged) : ?>
+					<span style="color:<?php echo esc_attr($color); ?>;font-weight:600;white-space:nowrap;" title="<?php echo esc_attr($hint . ' — throwaway address, a brand-new administrator, capabilities without a role, and so on. Open the list to see why (it also checks whether each address can receive mail at all): these are warning signs, not proof.'); ?>">&#9888; <?php echo (int) $flagged; ?></span>
+				<?php endif; ?>
+				<?php if ($total) : ?>
+					<button type="button" onclick="wpchOpenUsers(<?php echo (int) $index; ?>, '<?php echo esc_js($row_label); ?>')" class="row-button button">View Users</button>
+				<?php endif; ?>
+			</div>
+		</td>
+	<?php
+	}
+
+	// The body of one site's Users dialog: every account the endpoint sent,
+	// worst-looking first, with its address, its roles and any suspicion flags.
+	// $payload is the decoded /users response.
+	public function render_users_list(array $payload)
+	{
+		$users = isset($payload['users']) && is_array($payload['users']) ? $payload['users'] : [];
+		if (! $users) {
+			echo '<p style="color:#666;">This site reported no user accounts.</p>';
+			return;
+		}
+
+		$levels = [
+			'high'  => ['color' => '#b32d2e', 'label' => 'Possibly compromised'],
+			'watch' => ['color' => '#c98a00', 'label' => 'Worth checking'],
+		];
+	?>
+		<div class="wpch-users-list">
+			<?php foreach ($users as $user) : ?>
+				<?php
+				$flags = isset($user['flags']) && is_array($user['flags']) ? $user['flags'] : [];
+				$roles = isset($user['roles']) && is_array($user['roles']) ? $user['roles'] : [];
+				$level = isset($user['level']) && isset($levels[$user['level']]) ? $levels[$user['level']] : null;
+				// An endpoint that sent flags without a level still gets the
+				// milder of the two treatments rather than losing them.
+				if ($flags && ! $level) {
+					$level = $levels['watch'];
+				}
+				$login = isset($user['login']) ? (string) $user['login'] : '';
+				$name  = isset($user['name']) && '' !== trim((string) $user['name']) ? (string) $user['name'] : $login;
+				$email = isset($user['email']) ? (string) $user['email'] : '';
+				?>
+				<div class="wpch-user-card<?php echo $level ? ' is-flagged' : ''; ?>" style="--flag-color:<?php echo esc_attr($level ? $level['color'] : 'transparent'); ?>;">
+					<div class="wpch-user-id">
+						<strong><?php echo esc_html($name); ?></strong>
+						<small style="color:#666;">@<?php echo esc_html($login); ?></small>
+						<?php if ('' !== trim($email)) : ?>
+							<a href="mailto:<?php echo esc_attr($email); ?>"><?php echo esc_html($email); ?></a>
+						<?php else : ?>
+							<span style="color:#b32d2e;">no email address</span>
+						<?php endif; ?>
+					</div>
+					<div class="wpch-user-roles">
+						<?php if (! empty($user['super_admin'])) : ?>
+							<span class="wpch-role is-admin" title="Network super administrator">Super Admin</span>
+						<?php endif; ?>
+						<?php if ($roles) : ?>
+							<?php foreach ($roles as $role) : ?>
+								<span class="wpch-role<?php echo ! empty($user['privileged']) ? ' is-admin' : ''; ?>"><?php echo esc_html($role); ?></span>
+							<?php endforeach; ?>
+						<?php elseif (! empty($user['privileged'])) : ?>
+							<span class="wpch-role is-admin" title="This account has administrator capabilities set directly on it, without a role">Admin caps, no role</span>
+						<?php else : ?>
+							<span class="wpch-role" title="No role on this site">No role</span>
+						<?php endif; ?>
+						<small style="color:#666;white-space:nowrap;" title="Account created <?php echo esc_attr(isset($user['registered']) ? $user['registered'] : ''); ?>">
+							<?php echo esc_html(! empty($user['registered_ts']) ? human_time_diff($user['registered_ts'], time()) . ' old' : (isset($user['registered']) ? $user['registered'] : '')); ?>
+						</small>
+					</div>
+					<?php if ($flags) : ?>
+						<div class="wpch-user-flags" style="color:<?php echo esc_attr($level['color']); ?>;">
+							<strong>&#9888; <?php echo esc_html($level['label']); ?>:</strong>
+							<?php echo esc_html(implode(' · ', $flags)); ?>
+						</div>
+					<?php endif; ?>
+				</div>
+			<?php endforeach; ?>
+		</div>
+		<?php if (! empty($payload['truncated'])) : ?>
+			<p style="color:#666;margin-bottom:0;">Showing <?php echo count($users); ?> of <?php echo (int) $payload['total']; ?> accounts &mdash; every administrator is included, the rest are the most recently registered.</p>
+		<?php endif; ?>
+		<p style="color:#666;font-size:.85em;margin-bottom:0;">Flags are warning signs, not proof: a real account can trip one, and a careful intruder can avoid all of them.</p>
+	<?php
+	}
+
 	// The shell of the sidebar's "All Plugins" <dialog>. Its contents are built
 	// by render_all_plugins_grid() on first open (wpch_fetch_all_plugins) —
 	// aggregating every site's plugin list is exactly the kind of work that has
@@ -779,15 +901,16 @@ class WPCH_Admin_Page
 					<?php endif; */ ?>
 				</td>
 				<?php if ($is_off) : ?>
-					<td colspan="5" style="color:#50575e;">Status checks are switched off for this site &mdash; edit the row to turn them back on.</td>
+					<td colspan="6" style="color:#50575e;">Status checks are switched off for this site &mdash; edit the row to turn them back on.</td>
 				<?php elseif ($is_pending) : ?>
-					<td colspan="5" style="color:#50575e;">Checking this site&hellip;</td>
+					<td colspan="6" style="color:#50575e;">Checking this site&hellip;</td>
 				<?php elseif ($is_error) : ?>
-					<td colspan="5" style="color:#b32d2e;">Error: <?php echo esc_html($status->get_error_message()); ?></td>
+					<td colspan="6" style="color:#b32d2e;">Error: <?php echo esc_html($status->get_error_message()); ?></td>
 				<?php else : ?>
 					<?php $this->render_wp_cell($status, $wp_status); ?>
 					<?php $this->render_php_cell($status, $php_status); ?>
 					<?php $this->render_plugins_cell($i, $row_label, $status); ?>
+					<?php $this->render_users_cell($i, $row_label, $status); ?>
 					<?php $this->render_auto_updates_cell($status); ?>
 					<td><?php echo esc_html($status['themes_installed']); ?></td>
 				<?php endif; ?>
@@ -1019,6 +1142,7 @@ class WPCH_Admin_Page
 										<th scope="col">WP Version</th>
 										<th scope="col">PHP Version</th>
 										<th scope="col"><span title="Total / Active / Inactive">Plugins</span></th>
+										<th scope="col"><span title="Total accounts / accounts with administrator privileges">Users</span></th>
 										<th scope="col">Auto Updates</th>
 									<?php endif; ?>
 								</tr>
@@ -1052,6 +1176,7 @@ class WPCH_Admin_Page
 											<?php $this->render_wp_cell($row['status'], $row['wp']['tier']); ?>
 											<?php $this->render_php_cell($row['status'], $row['php']['tier']); ?>
 											<?php $this->render_plugins_cell($row['index'], $row['domain'], $row['status']); ?>
+											<?php $this->render_users_cell($row['index'], $row['domain'], $row['status']); ?>
 											<?php $this->render_auto_updates_cell($row['status']); ?>
 										<?php endif; ?>
 									</tr>
@@ -1339,6 +1464,7 @@ class WPCH_Admin_Page
 												<th scope="col" style="min-width: 130px;">WP Version</th>
 												<th scope="col" style="min-width: 110px;">PHP Version</th>
 												<th scope="col" style="min-width: 225px;"><span title="Total / Active / Inactive">Plugins</span></th>
+												<th scope="col" style="min-width: 170px;"><span title="Total accounts / accounts with administrator privileges">Users</span></th>
 												<th scope="col" style="min-width: 160px;">Auto Updates</th>
 												<th scope="col" style="min-width: 90px;">Themes</th>
 												<th scope="col" style="min-width: 250px;">Settings</th>
@@ -1349,7 +1475,7 @@ class WPCH_Admin_Page
 												<?php $folder = $section['folder']; ?>
 												<tbody class="folder" draggable="true" data-folder-id="<?php echo esc_attr($folder['id']); ?>" style="--style:<?php echo esc_attr($folder['color']); ?>;">
 													<tr class="parent-row">
-														<td colspan="10" style="text-align: left">
+														<td colspan="11" style="text-align: left">
 															<input type="checkbox" <?php checked(! isset($open_states[$folder['id']]) || $open_states[$folder['id']]); ?> id="wpch-folder-toggle-<?php echo esc_attr($folder['id']); ?>">
 															<label for="wpch-folder-toggle-<?php echo esc_attr($folder['id']); ?>">
 																<?php echo WPCH_Icons::get('folder', 22); ?>
@@ -1389,7 +1515,7 @@ class WPCH_Admin_Page
 											<?php else : ?>
 												<tbody class="non-folder" id="wpch-tbody-ungrouped" draggable="true" style="--style: #e7e7e7;">
 													<tr class="parent-row">
-														<td colspan="10" style="text-align: left">
+														<td colspan="11" style="text-align: left">
 															<input type="checkbox" <?php checked(! isset($open_states['ungrouped']) || $open_states['ungrouped']); ?> id="wpch-folder-toggle-ungrouped">
 															<label for="wpch-folder-toggle-ungrouped">
 																Ungrouped

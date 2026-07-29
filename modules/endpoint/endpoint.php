@@ -17,6 +17,7 @@ if (! defined('ABSPATH')) {
 define('WPCE_PLUGIN_DIR', plugin_dir_path(__FILE__));
 
 require_once WPCE_PLUGIN_DIR . 'includes/class-wpce-settings-page.php';
+require_once WPCE_PLUGIN_DIR . 'includes/class-wpce-user-audit.php';
 require_once WPCE_PLUGIN_DIR . 'includes/class-wpce-rest-controller.php';
 require_once WPCE_PLUGIN_DIR . 'includes/class-wpce-plugin.php';
 

@@ -42,6 +42,39 @@ class WPCH_Ajax
 		add_action('wp_ajax_wpch_folder_state', [$this, 'folder_state']);
 		add_action('wp_ajax_wpch_fetch_plugins', [$this, 'fetch_plugins']);
 		add_action('wp_ajax_wpch_fetch_all_plugins', [$this, 'fetch_all_plugins']);
+		add_action('wp_ajax_wpch_fetch_users', [$this, 'fetch_users']);
+	}
+
+	// One site's user list, rendered for the dialog wpchOpenUsers() opens —
+	// same on-demand shape as fetch_plugins(): cache first, otherwise a single
+	// request to that endpoint's /users route.
+	public function fetch_users()
+	{
+		$this->require_manager();
+
+		$endpoints = $this->endpoints->get_all();
+		$index     = isset($_POST['index']) ? (int) $_POST['index'] : -1;
+		if (! isset($endpoints[$index])) {
+			wp_send_json_error(['message' => 'Site not found.']);
+		}
+
+		$lists   = $this->status_checker->fetch_users([$index => $endpoints[$index]]);
+		$payload = $lists[$index];
+		if (is_wp_error($payload)) {
+			$message = 'HTTP 404' === $payload->get_error_message()
+				? 'This site\'s WP Connector endpoint is too old to report users — update it there first.'
+				: 'Could not read this site\'s users: ' . $payload->get_error_message();
+			wp_send_json_error(['message' => $message]);
+		}
+		// false = the row is switched off, so nothing was fetched.
+		if (! is_array($payload)) {
+			wp_send_json_error(['message' => 'Status checks are switched off for this site.']);
+		}
+
+		ob_start();
+		$this->admin_page->render_users_list($payload);
+
+		wp_send_json_success(['html' => ob_get_clean()]);
 	}
 
 	// One site's plugin list, rendered for the dialog wpchOpenPlugins() opens.

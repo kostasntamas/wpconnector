@@ -6,8 +6,8 @@ if (! defined('ABSPATH')) {
 
 /**
  * Fetches and evaluates remote endpoint data: the frequently-polled status
- * payload, and — separately, on demand and on its own much longer TTL — each
- * site's per-plugin list.
+ * payload, and — separately, on demand and on their own much longer TTLs —
+ * each site's per-plugin and per-user lists.
  */
 class WPCH_Status_Checker
 {
@@ -26,6 +26,11 @@ class WPCH_Status_Checker
 	// TTL. Keeping them out of the status payload is what stops every hub page
 	// load from serializing (and re-rendering) every site's full plugin list.
 	const PLUGINS_CACHE_OPTION = 'wpch_plugins_cache';
+
+	// Per-site user lists, cached like the plugin lists and for the same
+	// reason: only fetched when a Users dialog is opened, and far too big (and
+	// too personal) to ride along with every status poll.
+	const USERS_CACHE_OPTION = 'wpch_users_cache';
 
 	// How many WordPress feature releases behind the latest a site may be and
 	// still count as healthy. More than this many releases behind grades the
@@ -69,6 +74,27 @@ class WPCH_Status_Checker
 	private function plugins_cache_ttl(): int
 	{
 		return defined('WPCH_PLUGINS_CACHE_TTL') ? (int) WPCH_PLUGINS_CACHE_TTL : HOUR_IN_SECONDS;
+	}
+
+	// Same reasoning as the plugin lists: who has an account on a site changes
+	// rarely, and the list is only fetched when a dialog asks for it. Override
+	// with WPCH_USERS_CACHE_TTL in wp-config.php.
+	private function users_cache_ttl(): int
+	{
+		return defined('WPCH_USERS_CACHE_TTL') ? (int) WPCH_USERS_CACHE_TTL : HOUR_IN_SECONDS;
+	}
+
+	// The cache option and TTL a fetch() kind ('status', 'plugins', 'users')
+	// reads and writes.
+	private function cache_for(string $kind): array
+	{
+		if ('plugins' === $kind) {
+			return [self::PLUGINS_CACHE_OPTION, $this->plugins_cache_ttl()];
+		}
+		if ('users' === $kind) {
+			return [self::USERS_CACHE_OPTION, $this->users_cache_ttl()];
+		}
+		return [self::CACHE_OPTION, $this->cache_ttl()];
 	}
 
 	private function read_cache(string $option): array
@@ -181,7 +207,7 @@ class WPCH_Status_Checker
 			}
 		}
 
-		foreach ([self::CACHE_OPTION, self::PLUGINS_CACHE_OPTION] as $option) {
+		foreach ([self::CACHE_OPTION, self::PLUGINS_CACHE_OPTION, self::USERS_CACHE_OPTION] as $option) {
 			$cache = $this->read_cache($option);
 			if (! $cache) {
 				continue;
@@ -208,17 +234,26 @@ class WPCH_Status_Checker
 		return $this->fetch($endpoints, 'plugins', $force);
 	}
 
-	// Shared request pipeline for both routes. $kind is 'status' or 'plugins'
-	// and decides the URL, which cache is used, and how the decoded body is
-	// unwrapped — everything else (batching, the SSL hooks, the retry pass, the
-	// timing metadata) is identical.
+	// Each endpoint's user list, keyed like $endpoints: the decoded /users
+	// payload (['users' => rows, 'total' => int, 'truncated' => bool]) or a
+	// WP_Error. Endpoints older than 2.3.9 have no such route and answer 404,
+	// which the hub renders as "this site's endpoint plugin is too old".
+	public function fetch_users(array $endpoints, bool $force = false): array
+	{
+		return $this->fetch($endpoints, 'users', $force);
+	}
+
+	// Shared request pipeline for all three routes. $kind is 'status',
+	// 'plugins' or 'users' and decides the URL, which cache is used, and how
+	// the decoded body is unwrapped — everything else (batching, the SSL hooks,
+	// the retry pass, the timing metadata) is identical.
 	private function fetch(array $endpoints, string $kind, bool $force): array
 	{
 		$this->last_meta = [];
 
-		$is_plugins   = 'plugins' === $kind;
-		$cache_option = $is_plugins ? self::PLUGINS_CACHE_OPTION : self::CACHE_OPTION;
-		$ttl          = $is_plugins ? $this->plugins_cache_ttl() : $this->cache_ttl();
+		$is_plugins = 'plugins' === $kind;
+		$is_users   = 'users' === $kind;
+		list($cache_option, $ttl) = $this->cache_for($kind);
 
 		$statuses = [];
 		$requests = [];
@@ -290,9 +325,13 @@ class WPCH_Status_Checker
 			// The key travels as a header rather than ?key= so it never lands
 			// in the remote server's access logs; the endpoint's permission
 			// check accepts both.
-			$base_url     = $is_plugins
-				? WPCH_Endpoints::plugins_url($endpoint['url'])
-				: strtok(rtrim($endpoint['url'], '/'), '?');
+			if ($is_plugins) {
+				$base_url = WPCH_Endpoints::plugins_url($endpoint['url']);
+			} elseif ($is_users) {
+				$base_url = WPCH_Endpoints::users_url($endpoint['url']);
+			} else {
+				$base_url = strtok(rtrim($endpoint['url'], '/'), '?');
+			}
 			$requests[$i] = [
 				'url'     => $base_url,
 				'headers' => ['x-wpconnector-key' => $endpoint['key']],
@@ -357,6 +396,13 @@ class WPCH_Status_Checker
 					$payload = isset($payload['plugins']) && is_array($payload['plugins'])
 						? $payload['plugins']
 						: new WP_Error('bad_response', 'Invalid plugin list');
+				} elseif ($is_users) {
+					// The /users route answers {"users": [...], "total": n,
+					// "truncated": bool} — kept whole, the counts are rendered
+					// alongside the list.
+					if (! isset($payload['users']) || ! is_array($payload['users'])) {
+						$payload = new WP_Error('bad_response', 'Invalid user list');
+					}
 				} elseif (isset($payload['plugins'])) {
 					// Endpoints before 2.3.7 ship the whole plugin list inside
 					// the status payload. Keep it — it saves a /plugins request
@@ -388,12 +434,12 @@ class WPCH_Status_Checker
 				continue;
 			}
 
-			// A failed plugins fetch is no reason to throw away a list we
-			// already have: endpoints before 2.3.7 have no /plugins route at
-			// all (their list arrives with the status payload and is stashed
-			// above), and a list that is merely old still beats an error. The
-			// stale entry is left in place so the next attempt still retries.
-			if ($is_plugins && is_wp_error($payload) && isset($cache[$id]['data']) && $cache[$id]['hash'] === $hash) {
+			// A failed list fetch is no reason to throw away a list we already
+			// have: endpoints before 2.3.7 have no /plugins route at all (their
+			// list arrives with the status payload and is stashed above), and a
+			// list that is merely old still beats an error. The stale entry is
+			// left in place so the next attempt still retries.
+			if (($is_plugins || $is_users) && is_wp_error($payload) && isset($cache[$id]['data']) && $cache[$id]['hash'] === $hash) {
 				$statuses[$i] = $cache[$id]['data'];
 				continue;
 			}
