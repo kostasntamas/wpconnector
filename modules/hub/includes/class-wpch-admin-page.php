@@ -452,22 +452,22 @@ class WPCH_Admin_Page
 	?>
 		<td>
 			<?php if (! empty($status['plugins'])) : ?>
-				<div style="display: flex;flex-direction: column;align-items: center;justify-content: center;">
+				<div style="display: flex;align-items: center;justify-content: center;">
 				<?php endif; ?>
 				<?php
-				echo ' <div>';
-				echo ' <span style="font-weight:500;" title="total">';
+				echo ' <span>';
+				echo ' <strong  title="Total">';
 				echo esc_html($status['plugins_total']);
-				echo ' </span>';
+				echo ' </strong>';
 				echo ' / ';
-				echo ' <span style="font-weight:500;" title="active">';
+				echo ' <strong  title="Active">';
 				echo esc_html($status['plugins_active']);
-				echo ' </span>';
-				echo '/ ';
-				echo ' <span style="font-weight:500;" title="inactive">';
+				echo ' </strong>';
+				echo ' / ';
+				echo ' <strong  title="Inactive">';
 				echo esc_html($status['plugins_inactive']);
+				echo ' </strong>';
 				echo ' </span>';
-				echo ' </div>';
 				?>
 				<?php if (! empty($status['plugins'])) : ?>
 					<button type="button" command="show-modal" commandfor="<?php echo esc_attr($dialog_id); ?>" style="margin-left: 1ch;" class="row-button button">View Plugins</button>
