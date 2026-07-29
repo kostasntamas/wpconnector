@@ -535,7 +535,7 @@ class WPCH_Admin_Page
 				<?php endforeach; ?>
 			<?php endforeach; ?>
 		</div>
-	<?php
+		<?php
 	}
 
 	// The Users <td>: total / administrator counts from the status payload,
@@ -549,7 +549,7 @@ class WPCH_Admin_Page
 		// Endpoints before 2.3.9 don't report users at all — an em dash, not a
 		// zero, which would read as "this site has no accounts".
 		if (! isset($status['users_total'])) {
-	?>
+		?>
 			<td><span title="This site's WP Connector endpoint is too old to report users — update it to see them.">&mdash;</span></td>
 		<?php
 			return;
@@ -972,7 +972,7 @@ class WPCH_Admin_Page
 								</label>
 								<label style="text-align: start;display:flex;align-items:flex-start;gap:8px;" title="Tick this for sites that aren't WordPress (another CMS, a static site). The row stays in the table with its folder, tag and comments, but its status is never fetched.">
 									<input type="checkbox" id="wpch-edit-unmonitored-<?php echo esc_attr($i); ?>" <?php checked(! WPCH_Endpoints::is_monitored($endpoint)); ?>>
-									<span>Not a WordPress site <small style="display:block;font-weight:400;color:#666;">Skip status checks for this row</small></span>
+									<span>Skip status checks for this row<small style="display:block;font-weight:400;color:#666;">Usually for not Wordpress sites</small></span>
 								</label>
 								<button type="button" class="button button-primary" style="margin-top: 1em;" onclick="wpchSaveEndpointEdit(<?php echo (int) $i; ?>)">Save</button>
 							</div>
@@ -1365,7 +1365,7 @@ class WPCH_Admin_Page
 								</div>
 								<label style="text-align: start;display:flex;align-items:flex-start;gap:8px;" title="Tick this for sites that aren't WordPress (another CMS, a static site). The row stays in the table with its folder, tag and comments, but its status is never fetched.">
 									<input type="checkbox" name="new_unmonitored" value="1">
-									<span>Not a WordPress site <small style="display:block;font-weight:400;color:#666;">Skip status checks for this row</small></span>
+									<span>Skip status checks for this row<small style="display:block;font-weight:400;color:#666;">Usually for a not WordPress site</small></span>
 								</label>
 								<button type="submit" class="button button-primary" style="margin-top:1em;">Add Site</button>
 							</form>
