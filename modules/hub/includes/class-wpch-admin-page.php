@@ -455,23 +455,23 @@ class WPCH_Admin_Page
 		$total = isset($status['plugins_total']) ? (int) $status['plugins_total'] : 0;
 	?>
 		<td>
-			<?php if ($total) : ?>
-				<div style="display: flex;flex-direction: column;align-items: center;justify-content: center;">
+			<?php if (! empty($status['plugins'])) : ?>
+				<div style="display: flex;align-items: center;justify-content: center;">
 				<?php endif; ?>
 				<?php
-				echo ' <div>';
-				echo ' <span style="font-weight:500;" title="total">';
+				echo ' <span>';
+				echo ' <strong  title="Total">';
 				echo esc_html($status['plugins_total']);
-				echo ' </span>';
+				echo ' </strong>';
 				echo ' / ';
-				echo ' <span style="font-weight:500;" title="active">';
+				echo ' <strong  title="Active">';
 				echo esc_html($status['plugins_active']);
-				echo ' </span>';
-				echo '/ ';
-				echo ' <span style="font-weight:500;" title="inactive">';
+				echo ' </strong>';
+				echo ' / ';
+				echo ' <strong  title="Inactive">';
 				echo esc_html($status['plugins_inactive']);
+				echo ' </strong>';
 				echo ' </span>';
-				echo ' </div>';
 				?>
 				<?php if ($total) : ?>
 					<button type="button" onclick="wpchOpenPlugins(<?php echo (int) $index; ?>, '<?php echo esc_js($row_label); ?>')" style="margin-left: 1ch;" class="row-button button">View Plugins</button>
