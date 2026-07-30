@@ -938,7 +938,7 @@ class WPCH_Admin_Page
 						</button>
 					</div>
 
-					<dialog id="wpch-edit-dialog-<?php echo esc_attr($i); ?>" style="min-width:340px;max-width:90vw;">
+					<dialog id="wpch-edit-dialog-<?php echo esc_attr($i); ?>" style="min-width:360px;max-width:90vw;">
 						<div style="padding:16px;">
 							<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
 								<strong>Edit <?php echo esc_html($row_label); ?></strong>
@@ -972,7 +972,7 @@ class WPCH_Admin_Page
 								</label>
 								<label style="text-align: start;display:flex;align-items:flex-start;gap:8px;" title="Tick this for sites that aren't WordPress (another CMS, a static site). The row stays in the table with its folder, tag and comments, but its status is never fetched.">
 									<input type="checkbox" id="wpch-edit-unmonitored-<?php echo esc_attr($i); ?>" <?php checked(! WPCH_Endpoints::is_monitored($endpoint)); ?>>
-									<span>Skip status checks for this row<small style="display:block;font-weight:400;color:#666;">Usually for not Wordpress sites</small></span>
+									<span>Skip status checks, for this row<small style="display:block;font-weight:400;color:#666;">Usually for not Wordpress sites</small></span>
 								</label>
 								<button type="button" class="button button-primary" style="margin-top: 1em;" onclick="wpchSaveEndpointEdit(<?php echo (int) $i; ?>)">Save</button>
 							</div>
@@ -1137,7 +1137,7 @@ class WPCH_Admin_Page
 										// here so that can be fixed without hunting the site
 										// down in the main table first.
 										?>
-										<th scope="col" style="min-width: 110px;">Settings</th>
+										<th scope="col">Settings</th>
 									<?php else : ?>
 										<th scope="col">WP Version</th>
 										<th scope="col">PHP Version</th>
@@ -1365,14 +1365,14 @@ class WPCH_Admin_Page
 								</div>
 								<label style="text-align: start;display:flex;align-items:flex-start;gap:8px;" title="Tick this for sites that aren't WordPress (another CMS, a static site). The row stays in the table with its folder, tag and comments, but its status is never fetched.">
 									<input type="checkbox" name="new_unmonitored" value="1">
-									<span>Skip status checks for this row<small style="display:block;font-weight:400;color:#666;">Usually for a not WordPress site</small></span>
+									<span>Skip status checks, for this row<small style="display:block;font-weight:400;color:#666;">Usually for a not WordPress site</small></span>
 								</label>
 								<button type="submit" class="button button-primary" style="margin-top:1em;">Add Site</button>
 							</form>
 						</div>
 					</dialog>
 
-					<dialog id="wpch-import-dialog" style="min-width:340px;max-width:90vw;">
+					<dialog id="wpch-import-dialog" style="min-width:360px;max-width:90vw;">
 						<div style="padding:16px;">
 							<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
 								<strong>Import JSON</strong>
@@ -1457,17 +1457,17 @@ class WPCH_Admin_Page
 									<table class="wpch-status-table" id="wpch-status-table">
 										<thead>
 											<tr>
-												<th scope="col" style="min-width: 45px;">#</th>
-												<th scope="col" style="min-width: 75px;">Login</th>
-												<th scope="col" style="min-width: 260px;">Domain</th>
-												<th scope="col" style="min-width: 160px;">Site Health</th>
-												<th scope="col" style="min-width: 130px;">WP Version</th>
-												<th scope="col" style="min-width: 110px;">PHP Version</th>
-												<th scope="col" style="min-width: 225px;"><span title="Total / Active / Inactive">Plugins</span></th>
-												<th scope="col" style="min-width: 170px;"><span title="Total accounts / accounts with administrator privileges">Users</span></th>
-												<th scope="col" style="min-width: 160px;">Auto Updates</th>
-												<th scope="col" style="min-width: 90px;">Themes</th>
-												<th scope="col" style="min-width: 250px;">Settings</th>
+												<th scope="col">#</th>
+												<th scope="col">Login</th>
+												<th scope="col">Domain</th>
+												<th scope="col">Site Health</th>
+												<th scope="col">WP Version</th>
+												<th scope="col">PHP Version</th>
+												<th scope="col"><span title="Total / Active / Inactive">Plugins</span></th>
+												<th scope="col"><span title="Total accounts / accounts with administrator privileges">Users</span></th>
+												<th scope="col">Auto Updates</th>
+												<th scope="col">Themes</th>
+												<th scope="col">Settings</th>
 											</tr>
 										</thead>
 										<?php foreach ($sections as $section) : ?>
