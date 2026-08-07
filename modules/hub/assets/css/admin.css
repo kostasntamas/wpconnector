@@ -130,6 +130,7 @@
 	block-size: 100dvb;
 	position: sticky;
 	top: 0;
+	z-index: 2;
 }
 
 .wpch-sidebar a {
@@ -177,6 +178,7 @@
 	cursor: pointer;
 	line-height: 1;
 	justify-content: center;
+	text-wrap: nowrap;
 }
 
 .wpch-side-btn:hover,

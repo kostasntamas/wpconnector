@@ -1496,7 +1496,7 @@ class WPCH_Admin_Page
 												ob_start();
 												?>
 												<dialog id="wpch-edit-folder-dialog-<?php echo esc_attr($folder['id']); ?>">
-													<form method="post" style="padding:16px;min-width:300px;display: flex;flex-direction: column; gap: 20px;">
+													<form method="post" style="padding:16px;min-width:300px;display:flex;flex-direction:column;gap:20px;">
 														<?php wp_nonce_field('wpch_manage'); ?>
 														<input type="hidden" name="wpch_action" value="edit_folder">
 														<input type="hidden" name="folder_id" value="<?php echo esc_attr($folder['id']); ?>">
