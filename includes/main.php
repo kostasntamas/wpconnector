@@ -78,7 +78,43 @@ function wpc_ensure_endpoint_key()
 {
 	if (! get_option('wpce_secret_key')) {
 		update_option('wpce_secret_key', wp_generate_password(32, false));
+		update_option('wpce_secret_key_domain', wpc_current_site_host());
+	} elseif (! get_option('wpce_secret_key_domain')) {
+		// Key predates domain tracking - record the current host so existing
+		// installs don't immediately trip the "domain changed" notice below.
+		update_option('wpce_secret_key_domain', wpc_current_site_host());
 	}
+}
+
+/**
+ * Generates a brand new endpoint secret key and records the current host
+ * against it, so the "domain changed" notice clears until the site moves
+ * again. Used by the Regenerate Key button on the Endpoint settings page.
+ */
+function wpc_regenerate_endpoint_key(): string
+{
+	$key = wp_generate_password(32, false);
+	update_option('wpce_secret_key', $key);
+	update_option('wpce_secret_key_domain', wpc_current_site_host());
+	return $key;
+}
+
+function wpc_current_site_host(): string
+{
+	$host = wp_parse_url(home_url(), PHP_URL_HOST);
+	return $host ? strtolower($host) : '';
+}
+
+/**
+ * True once this site's host no longer matches the host the endpoint key
+ * was last set for - the signal that the site was moved or cloned to a new
+ * domain and the key (still valid on the original domain) should be rotated.
+ * Scheme-only changes (http <-> https) don't count, only the host.
+ */
+function wpc_endpoint_key_domain_changed(): bool
+{
+	$recorded = get_option('wpce_secret_key_domain');
+	return $recorded && $recorded !== wpc_current_site_host();
 }
 
 // One-time redirect to the setup screen right after activation.
@@ -205,6 +241,19 @@ add_action('admin_notices', function () {
 	printf(
 		'<div class="notice notice-warning"><p><strong>WP Connector</strong> is active but no mode is selected yet. <a href="%s">Choose Endpoint, Hub, or Both</a> to finish setup.</p></div>',
 		esc_url(admin_url('options-general.php?page=wpconnector'))
+	);
+});
+
+// Suggest regenerating the endpoint key once this site's host no longer
+// matches the one the key was set for - the usual sign the site was moved
+// or cloned to a new domain (staging -> prod, a host migration, etc).
+add_action('admin_notices', function () {
+	if (! wpc_mode_has('endpoint') || ! current_user_can('manage_options') || ! wpc_endpoint_key_domain_changed()) {
+		return;
+	}
+	printf(
+		'<div class="notice notice-warning"><p><strong>WP Connector:</strong> this site\'s domain appears to have changed since the Endpoint secret key was set - if this site was moved or cloned from another domain, regenerate the key so the old one stops being trusted here. <a href="%s">Endpoint settings</a></p></div>',
+		esc_url(admin_url('options-general.php?page=wpconnectorendpoint'))
 	);
 });
 
